@@ -77,7 +77,7 @@ Contributions are welcome! If you have suggestions or feature requests, please f
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/yourusername/ktsu.DeepClone.git
+   git clone https://github.com/ktsu-dev/ktsu.DeepClone.git
    ```
 2. Open the project in your preferred IDE.
 3. Build and run tests to ensure functionality.
