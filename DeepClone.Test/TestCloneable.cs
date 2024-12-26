@@ -14,7 +14,7 @@ public class TestCloneable(int value) : IDeepCloneable<TestCloneable>
 public class DeepCloneTests
 {
 	[TestMethod]
-	public void DeepClone_ShouldReturnNewInstance()
+	public void DeepCloneShouldReturnNewInstance()
 	{
 		// Arrange
 		var original = new TestCloneable(42);
@@ -28,7 +28,7 @@ public class DeepCloneTests
 	}
 
 	[TestMethod]
-	public void DeepClone_ShouldCopyValues()
+	public void DeepCloneShouldCopyValues()
 	{
 		// Arrange
 		var original = new TestCloneable(42);
