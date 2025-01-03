@@ -1,6 +1,6 @@
-## v1.1.16 (unknown)
+## v1.1.16 (patch)
 
-Changes since v1.1.16-pre.6:
+Changes since v1.1.15-pre.1:
 
 - Add scripts for automated metadata generation and versioning ([@Matthew Edmondson](https://github.com/Matthew Edmondson))
 
