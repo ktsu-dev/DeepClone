@@ -1,8 +1,9 @@
-## v1.1.16 (unknown)
+## v1.1.16 (patch)
 
 Changes since v1.1.16-pre.7:
 
 - Add mailmap ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix changelog script to handle prerelease version drops correctly ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v1.1.16 (patch)
 
