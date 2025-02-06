@@ -1,10 +1,3 @@
-## v1.1.17-pre.1 (patch)
-
-Changes since v1.1.16:
-
-- Add mailmap ([@matt-edmondson](https://github.com/matt-edmondson))
-- Fix changelog script to handle prerelease version drops correctly ([@matt-edmondson](https://github.com/matt-edmondson))
-
 ## v1.1.16 (patch)
 
 Changes since v1.1.16-pre.29:
@@ -12,23 +5,10 @@ Changes since v1.1.16-pre.29:
 - Add mailmap ([@matt-edmondson](https://github.com/matt-edmondson))
 - Fix changelog script to handle prerelease version drops correctly ([@matt-edmondson](https://github.com/matt-edmondson))
 
-## v1.1.15-pre.1 (patch)
-
-Changes since v1.1.14:
-
-- Renamed metadata files ([@matt-edmondson](https://github.com/matt-edmondson))
-
 ## v1.1.10 (patch)
 
 Changes since v1.1.9:
 
-- Replace LICENSE file with LICENSE.md and update copyright information ([@matt-edmondson](https://github.com/matt-edmondson))
-
-## v1.1.10-pre.1 (patch)
-
-Changes since v1.1.9:
-
-- Renamed metadata files ([@matt-edmondson](https://github.com/matt-edmondson))
 - Replace LICENSE file with LICENSE.md and update copyright information ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v1.1.8 (patch)
