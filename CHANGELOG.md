@@ -1,3 +1,16 @@
+## v1.2.0 (minor)
+
+Changes since v1.1.0:
+
+- Add mailmap ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add scripts for automated metadata generation and versioning ([@matt-edmondson](https://github.com/matt-edmondson))
+- Apply new editorconfig ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix changelog script to handle prerelease version drops correctly ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove unnecessary PackageReference from DeepClone.Test project ([@matt-edmondson](https://github.com/matt-edmondson))
+- Renamed metadata files ([@matt-edmondson](https://github.com/matt-edmondson))
+- Replace LICENSE file with LICENSE.md and update copyright information ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update test method names and replace LICENSE file ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.1.16 (patch)
 
 Changes since v1.1.16-pre.29:
