@@ -174,7 +174,8 @@ function Get-BuildConfiguration {
 
         if ($allCommitMessages) {
             # Count commits that are not [skip ci]
-            $nonSkipCommits = @($allCommitMessages | Where-Object { -not $_.Contains("[skip ci]") })
+            # Force array treatment to ensure $_ is properly populated in pipeline
+            $nonSkipCommits = @(@($allCommitMessages) | Where-Object { -not $_.Contains("[skip ci]") })
             $ONLY_SKIP_CI = ($nonSkipCommits.Count -eq 0)
 
             Write-Information "Total commits: $($allCommitMessages.Count), Non-skip commits: $($nonSkipCommits.Count)" -Tags "Get-BuildConfiguration"
