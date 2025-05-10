@@ -1027,9 +1027,19 @@ function Get-VersionNotes {
 
         # Only filter out version updates for non-prerelease versions
         if ($versionType -ne "prerelease") {
-            $filteredCommits = $uniqueCommits | Where-Object { -not $_.Contains("Update VERSION to") -and -not $_.Contains("[skip ci]") }
+            $filteredCommits = @()
+            foreach ($commit in $uniqueCommits) {
+                if (-not $commit.Contains("Update VERSION to") -and -not $commit.Contains("[skip ci]")) {
+                    $filteredCommits += $commit
+                }
+            }
         } else {
-            $filteredCommits = $uniqueCommits | Where-Object { -not $_.Contains("[skip ci]") }
+            $filteredCommits = @()
+            foreach ($commit in $uniqueCommits) {
+                if (-not $commit.Contains("[skip ci]")) {
+                    $filteredCommits += $commit
+                }
+            }
         }
 
         foreach ($commit in $filteredCommits) {
@@ -2036,9 +2046,21 @@ function Invoke-ExpressionWithLogging {
         }
 
         if ($ScriptBlock) {
-            # Execute the expression and return its result
-            & $ScriptBlock | ForEach-Object {
-                Write-Output $_
+            # Execute the expression and capture its output
+            $output = & $ScriptBlock
+
+            # Handle different output types properly
+            if ($null -eq $output) {
+                # No output - return nothing
+                return
+            }
+            elseif ($output -is [array]) {
+                # Array output - return as is
+                return $output
+            }
+            else {
+                # Single item - return as single item
+                return $output
             }
         }
     }
