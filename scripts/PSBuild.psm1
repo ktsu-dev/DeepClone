@@ -173,9 +173,19 @@ function Get-BuildConfiguration {
         $allCommitMessages = "git log --format=format:%s $commitRange" | Invoke-ExpressionWithLogging -Tags "Get-BuildConfiguration"
 
         if ($allCommitMessages) {
+            # Ensure we're working with an array - split string output into lines if needed
+            if ($allCommitMessages -is [string]) {
+                $allCommitMessages = $allCommitMessages -split "`n"
+            }
+
             # Count commits that are not [skip ci]
-            # Force array treatment to ensure $_ is properly populated in pipeline
-            $nonSkipCommits = @(@($allCommitMessages) | Where-Object { -not $_.Contains("[skip ci]") })
+            $nonSkipCommits = @()
+            foreach ($message in $allCommitMessages) {
+                if (-not $message.Contains("[skip ci]")) {
+                    $nonSkipCommits += $message
+                }
+            }
+
             $ONLY_SKIP_CI = ($nonSkipCommits.Count -eq 0)
 
             Write-Information "Total commits: $($allCommitMessages.Count), Non-skip commits: $($nonSkipCommits.Count)" -Tags "Get-BuildConfiguration"
