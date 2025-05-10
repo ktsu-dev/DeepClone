@@ -115,7 +115,49 @@ function Get-BuildConfiguration {
     # Determine if this is main branch and not tagged
     $IS_MAIN = $GitRef -eq "refs/heads/main"
     $IS_TAGGED = "(git show-ref --tags -d | Out-String).Contains(`"$GitSha`")" | Invoke-ExpressionWithLogging -Tags "Get-BuildConfiguration"
-    $SHOULD_RELEASE = ($IS_MAIN -AND -NOT $IS_TAGGED -AND $IS_OFFICIAL)
+
+    # Check if all commits are marked with [skip ci]
+    $ONLY_SKIP_CI = $false
+    if ($IS_MAIN -AND -NOT $IS_TAGGED -AND $IS_OFFICIAL) {
+        # Find the last release tag
+        $tags = "git tag --list" | Invoke-ExpressionWithLogging -Tags "Get-BuildConfiguration"
+        $hasRealTags = ($null -ne $tags) -and ($tags.Count -gt 0) -and (-not [string]::IsNullOrWhiteSpace($tags))
+
+        # Determine the commit range to check
+        $commitRange = ""
+        if ($hasRealTags) {
+            # If we have tags, use the most recent one
+            $sortedTags = "git tag --sort=-v:refname" | Invoke-ExpressionWithLogging -Tags "Get-BuildConfiguration"
+            $lastTag = $sortedTags[0]
+            Write-Information "Found tags. Using most recent tag: $lastTag" -Tags "Get-BuildConfiguration"
+            $commitRange = "$lastTag..HEAD"
+        } else {
+            # If no tags, check all commits or use a limited number to avoid checking the entire history
+            Write-Information "No tags found. Checking recent commits only." -Tags "Get-BuildConfiguration"
+            $commitRange = "-10" # Last 10 commits
+        }
+
+        # Get commit messages for the range
+        Write-Information "Checking commits in range: $commitRange" -Tags "Get-BuildConfiguration"
+        $allCommitMessages = "git log --format=format:%s $commitRange" | Invoke-ExpressionWithLogging -Tags "Get-BuildConfiguration"
+
+        if ($allCommitMessages) {
+            # Count commits that are not [skip ci]
+            $nonSkipCommits = @($allCommitMessages | Where-Object { -not $_.Contains("[skip ci]") })
+            $ONLY_SKIP_CI = ($nonSkipCommits.Count -eq 0)
+
+            Write-Information "Total commits: $($allCommitMessages.Count), Non-skip commits: $($nonSkipCommits.Count)" -Tags "Get-BuildConfiguration"
+
+            if ($ONLY_SKIP_CI) {
+                Write-Information "All commits are tagged with [skip ci], skipping release" -Tags "Get-BuildConfiguration"
+            }
+        } else {
+            Write-Information "No commits found in range" -Tags "Get-BuildConfiguration"
+        }
+    }
+
+    # Only release if we're on main, not tagged, official repo, and have non-skip-ci commits
+    $SHOULD_RELEASE = ($IS_MAIN -AND -NOT $IS_TAGGED -AND $IS_OFFICIAL -AND -NOT $ONLY_SKIP_CI)
 
     # Check for .csx files (dotnet-script)
     $csx = @(Get-ChildItem -Path $WorkspacePath -Recurse -Filter *.csx -ErrorAction SilentlyContinue)
@@ -142,6 +184,7 @@ function Get-BuildConfiguration {
             IsMain = $IS_MAIN
             IsTagged = $IS_TAGGED
             ShouldRelease = $SHOULD_RELEASE
+            OnlySkipCI = $ONLY_SKIP_CI
             UseDotnetScript = $USE_DOTNET_SCRIPT
             OutputPath = $OUTPUT_PATH
             StagingPath = $STAGING_PATH
