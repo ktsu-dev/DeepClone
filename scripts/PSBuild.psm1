@@ -4,12 +4,6 @@
 #
 # A comprehensive PowerShell module for automating the build, test, package,
 # and release process for .NET applications using Git-based versioning.
-# This module provides a complete CI/CD pipeline implementation with:
-#   - Semantic versioning from Git history
-#   - Changelog generation
-#   - .NET building, testing, and packaging
-#   - GitHub release automation
-#   - NuGet package publishing
 # See README.md for detailed documentation and usage examples.
 
 # Set Strict Mode
@@ -20,19 +14,9 @@ Set-StrictMode -Version Latest
 function Initialize-BuildEnvironment {
     <#
     .SYNOPSIS
-        Initializes the build environment with standard settings for .NET SDK.
+        Initializes the build environment with standard settings.
     .DESCRIPTION
-        Sets up environment variables for .NET SDK to optimize the build experience:
-        - Disables first-time experience to improve performance
-        - Opts out of telemetry for privacy
-        - Disables logo display for cleaner output
-
-        This function should be called at the beginning of any build workflow.
-    .EXAMPLE
-        Initialize-BuildEnvironment
-        # Output: "Build environment initialized"
-    .NOTES
-        This function doesn't require any parameters and returns no output.
+        Sets up environment variables for .NET SDK and initializes other required build settings.
     #>
     [CmdletBinding()]
     param()
@@ -49,23 +33,16 @@ function Get-BuildConfiguration {
     .SYNOPSIS
         Gets the build configuration based on Git status and environment.
     .DESCRIPTION
-        Determines build configuration settings by analyzing Git repository state and environment variables.
-        This function evaluates:
-        - Whether the build is for an official repository or fork
-        - If we're on the main branch and should trigger a release
-        - If commits are tagged with [skip ci] to prevent releases
-        - Build paths and artifact patterns
-        - .NET SDK-specific configuration
-
-        Returns a standardized configuration object containing all settings needed for the build process.
+        Determines if this is a release build, checks Git status, and sets up build paths.
+        Returns a configuration object containing all necessary build settings and paths.
     .PARAMETER ServerUrl
-        The GitHub server URL (e.g., "https://github.com").
+        The server URL to use for the build.
     .PARAMETER GitRef
-        The Git reference (branch/tag) being built (e.g., "refs/heads/main").
+        The Git reference (branch/tag) being built.
     .PARAMETER GitSha
         The Git commit SHA being built.
     .PARAMETER GitHubOwner
-        The GitHub owner/organization of the repository.
+        The GitHub owner of the repository.
     .PARAMETER GitHubRepo
         The GitHub repository name.
     .PARAMETER GithubToken
@@ -77,21 +54,13 @@ function Get-BuildConfiguration {
     .PARAMETER ExpectedOwner
         The expected owner/organization of the official repository.
     .PARAMETER ChangelogFile
-        The path to the changelog file (typically "CHANGELOG.md").
+        The path to the changelog file.
     .PARAMETER LatestChangelogFile
         The path to the file containing only the latest version's changelog. Defaults to "LATEST_CHANGELOG.md".
     .PARAMETER AssetPatterns
-        Array of glob patterns for files to include as release assets (e.g., "*.zip", "*.nupkg").
-    .EXAMPLE
-        $config = Get-BuildConfiguration -ServerUrl "https://github.com" -GitRef "refs/heads/main" `
-            -GitSha "abc123" -GitHubOwner "myorg" -GitHubRepo "myproject" -GithubToken $token `
-            -NuGetApiKey $nugetKey -WorkspacePath "C:\projects\myrepo" -ExpectedOwner "myorg" `
-            -ChangelogFile "CHANGELOG.md" -AssetPatterns @("*.nupkg", "*.zip")
-
-        # Result contains standardized configuration with all paths and settings needed for the build
+        Array of glob patterns for release assets.
     .OUTPUTS
-        [PSCustomObject] A configuration object with Success, Error, and Data properties.
-        The Data property contains all build configuration settings.
+        PSCustomObject containing build configuration data with Success, Error, and Data properties.
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
@@ -146,60 +115,7 @@ function Get-BuildConfiguration {
     # Determine if this is main branch and not tagged
     $IS_MAIN = $GitRef -eq "refs/heads/main"
     $IS_TAGGED = "(git show-ref --tags -d | Out-String).Contains(`"$GitSha`")" | Invoke-ExpressionWithLogging -Tags "Get-BuildConfiguration"
-
-    # Check if all commits are marked with [skip ci]
-    $ONLY_SKIP_CI = $false
-    if ($IS_MAIN -AND -NOT $IS_TAGGED -AND $IS_OFFICIAL) {
-        # Find the last release tag
-        $tags = "git tag --list" | Invoke-ExpressionWithLogging -Tags "Get-BuildConfiguration"
-        $hasRealTags = ($null -ne $tags) -and ($tags.Count -gt 0) -and (-not [string]::IsNullOrWhiteSpace($tags))
-
-        # Determine the commit range to check
-        $commitRange = ""
-        if ($hasRealTags) {
-            # If we have tags, use the most recent one
-            $sortedTags = "git tag --sort=-v:refname" | Invoke-ExpressionWithLogging -Tags "Get-BuildConfiguration"
-            $lastTag = $sortedTags[0]
-            Write-Information "Found tags. Using most recent tag: $lastTag" -Tags "Get-BuildConfiguration"
-            $commitRange = "$lastTag..HEAD"
-        } else {
-            # If no tags, check all commits or use a limited number to avoid checking the entire history
-            Write-Information "No tags found. Checking recent commits only." -Tags "Get-BuildConfiguration"
-            $commitRange = "-10" # Last 10 commits
-        }
-
-        # Get commit messages for the range
-        Write-Information "Checking commits in range: $commitRange" -Tags "Get-BuildConfiguration"
-        $allCommitMessages = "git log --format=format:%s $commitRange" | Invoke-ExpressionWithLogging -Tags "Get-BuildConfiguration"
-
-        if ($allCommitMessages) {
-            # Ensure we're working with an array - split string output into lines if needed
-            if ($allCommitMessages -is [string]) {
-                $allCommitMessages = $allCommitMessages -split "`n"
-            }
-
-            # Count commits that are not [skip ci]
-            $nonSkipCommits = @()
-            foreach ($message in $allCommitMessages) {
-                if (-not $message.Contains("[skip ci]")) {
-                    $nonSkipCommits += $message
-                }
-            }
-
-            $ONLY_SKIP_CI = ($nonSkipCommits.Count -eq 0)
-
-            Write-Information "Total commits: $($allCommitMessages.Count), Non-skip commits: $($nonSkipCommits.Count)" -Tags "Get-BuildConfiguration"
-
-            if ($ONLY_SKIP_CI) {
-                Write-Information "All commits are tagged with [skip ci], skipping release" -Tags "Get-BuildConfiguration"
-            }
-        } else {
-            Write-Information "No commits found in range" -Tags "Get-BuildConfiguration"
-        }
-    }
-
-    # Only release if we're on main, not tagged, official repo, and have non-skip-ci commits
-    $SHOULD_RELEASE = ($IS_MAIN -AND -NOT $IS_TAGGED -AND $IS_OFFICIAL -AND -NOT $ONLY_SKIP_CI)
+    $SHOULD_RELEASE = ($IS_MAIN -AND -NOT $IS_TAGGED -AND $IS_OFFICIAL)
 
     # Check for .csx files (dotnet-script)
     $csx = @(Get-ChildItem -Path $WorkspacePath -Recurse -Filter *.csx -ErrorAction SilentlyContinue)
@@ -226,7 +142,6 @@ function Get-BuildConfiguration {
             IsMain = $IS_MAIN
             IsTagged = $IS_TAGGED
             ShouldRelease = $SHOULD_RELEASE
-            OnlySkipCI = $ONLY_SKIP_CI
             UseDotnetScript = $USE_DOTNET_SCRIPT
             OutputPath = $OUTPUT_PATH
             StagingPath = $STAGING_PATH
@@ -264,18 +179,8 @@ function Get-GitTags {
     .SYNOPSIS
         Gets sorted git tags from the repository.
     .DESCRIPTION
-        Retrieves a list of git tags sorted by version in descending order (newest first).
-        This function:
-        - Configures git versionsort to correctly handle version tags with prereleases
-        - Returns tags with proper sorting to ensure semantic version ordering
-        - Returns a default tag ('v1.0.0-pre.0') if no tags exist in the repository
-
-        The output is used for version calculations and changelog generation.
-    .EXAMPLE
-        $tags = Get-GitTags
-        # Returns an array of version tags like @('v2.1.0', 'v2.0.0', 'v1.0.0')
-    .OUTPUTS
-        [string[]] An array of version tags in descending order, or a default tag if none exist.
+        Retrieves a list of git tags sorted by version in descending order.
+        Returns a default tag if no tags exist.
     #>
     [CmdletBinding()]
     [OutputType([string[]])]
@@ -288,47 +193,55 @@ function Get-GitTags {
     }
 
     Write-Information "Getting sorted tags..." -Tags "Get-GitTags"
-    # Get tags and ensure we return an array
+    # Get tags
     $output = "git tag --list --sort=-v:refname" | Invoke-ExpressionWithLogging -Tags "Get-GitTags"
 
-    $tags = @($output)
-
-    # Return default if no tags exist
-    if ($null -eq $tags -or $tags.Count -eq 0) {
-        Write-Information "No tags found, returning default v1.0.0-pre.0" -Tags "Get-GitTags"
-        return @('v1.0.0-pre.0')
+    # Ensure we always return an array
+    if ($null -eq $output) {
+        Write-Information "No tags found, returning empty array" -Tags "Get-GitTags"
+        return @()
+    }
+    
+    # Convert to array if it's not already
+    if ($output -isnot [array]) {
+        if ([string]::IsNullOrWhiteSpace($output)) {
+            Write-Information "No tags found, returning empty array" -Tags "Get-GitTags"
+            return @()
+        }
+        $output = @($output)
+    }
+    
+    if ($output.Count -eq 0) {
+        Write-Information "No tags found, returning empty array" -Tags "Get-GitTags"
+        return @()
     }
 
-    Write-Information "Found $($tags.Count) tags" -Tags "Get-GitTags"
-    return $tags
+    Write-Information "Found $($output.Count) tags" -Tags "Get-GitTags"
+    return $output
 }
 
 function Get-VersionType {
     <#
     .SYNOPSIS
-        Determines the type of semantic version bump needed based on commit history.
+        Determines the type of version bump needed based on commit history and public API changes
     .DESCRIPTION
-        Analyzes commit messages and code changes to determine the appropriate semantic version bump:
+        Analyzes commit messages and code changes to determine whether the next version should be:
+        - Major (1.0.0 → 2.0.0): Breaking changes, indicated by [major] tags in commits
+        - Minor (1.0.0 → 1.1.0): Non-breaking public API changes (additions, modifications, removals)
+        - Patch (1.0.0 → 1.0.1): Bug fixes and changes that don't modify the public API
+        - Prerelease (1.0.0 → 1.0.1-pre.1): Small changes or no significant changes
+        - Skip: Only [skip ci] commits or no significant changes requiring a version bump
 
-        1. Major (1.0.0 → 2.0.0): Breaking changes, indicated by [major] tags in commits
-        2. Minor (1.0.0 → 1.1.0): New features or non-breaking API changes, indicated by:
-           - [minor] tags in commits
-           - Detection of public API changes through regex patterns
-        3. Patch (1.0.0 → 1.0.1): Bug fixes and changes that don't modify the public API
-           - [patch] tags in commits
-           - Code changes that don't modify public API
-        4. Prerelease (1.0.0 → 1.0.1-pre.1): Small changes or no significant changes
-           - [pre] tags in commits
-           - Default when no other version bump is detected
-
-        The function returns both the version increment type and the reason for the decision.
+        Version bump determination follows these rules in order:
+        1. Explicit tags in commit messages: [major], [minor], [patch], [pre]
+        2. Public API changes detection via regex patterns (triggers minor bump)
+        3. Code changes that don't modify public API (triggers patch bump)
+        4. Default to prerelease bump for minimal changes
+        5. If only [skip ci] commits are found, suggest skipping the release
     .PARAMETER Range
-        The git commit range to analyze (e.g., "v1.0.0...HEAD" or a specific commit range).
-    .EXAMPLE
-        $result = Get-VersionType -Range "v1.0.0..HEAD"
-        # Returns an object with Type ("major", "minor", "patch", or "prerelease") and Reason properties
+        The git commit range to analyze (e.g., "v1.0.0...HEAD" or a specific commit range)
     .OUTPUTS
-        [PSCustomObject] An object with Type and Reason properties explaining the version increment decision.
+        Returns a PSCustomObject with 'Type' and 'Reason' properties explaining the version increment decision.
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
@@ -347,6 +260,32 @@ function Get-VersionType {
 
     # First check for explicit version markers in commit messages
     $messages = "git log --format=format:%s `"$Range`"" | Invoke-ExpressionWithLogging -Tags "Get-VersionType"
+    
+    # Ensure messages is always an array
+    if ($null -eq $messages) {
+        $messages = @()
+    } elseif ($messages -isnot [array]) {
+        $messages = @($messages)
+    }
+
+    # Check if we have any commits at all
+    if (@($messages).Count -eq 0) {
+        return [PSCustomObject]@{
+            Type = "skip"
+            Reason = "No commits found in the specified range"
+        }
+    }
+
+    # Check if all commits are skip ci commits
+    $skipCiPattern = '\[skip ci\]|\[ci skip\]'
+    $skipCiCommits = $messages | Where-Object { $_ -match $skipCiPattern }
+    
+    if (@($skipCiCommits).Count -eq @($messages).Count -and @($messages).Count -gt 0) {
+        return [PSCustomObject]@{
+            Type = "skip"
+            Reason = "All commits contain [skip ci] tag, skipping release"
+        }
+    }
 
     foreach ($message in $messages) {
         if ($message.Contains('[major]')) {
@@ -422,33 +361,12 @@ function Get-VersionInfoFromGit {
     .SYNOPSIS
         Gets comprehensive version information based on Git tags and commit analysis.
     .DESCRIPTION
-        Analyzes the Git repository to determine the next version number based on semantic versioning principles:
-
-        1. Finds the most recent version tag in the repository
-        2. Analyzes commit history since that tag
-        3. Determines the appropriate version increment (major, minor, patch, or prerelease)
-        4. Calculates the new version number
-
-        The function follows SemVer 2.0 practices for version calculation, including proper handling
-        of prerelease versions. It provides a rich object containing all version components and
-        the reasoning behind the version decision.
+        Finds the most recent version tag, analyzes commit history, and determines the next version
+        following semantic versioning principles. Returns a rich object with all version components.
     .PARAMETER CommitHash
-        The Git commit hash being built (typically HEAD or the current commit).
+        The Git commit hash being built.
     .PARAMETER InitialVersion
-        The version to use if no tags exist in the repository. Defaults to "1.0.0".
-    .EXAMPLE
-        $versionInfo = Get-VersionInfoFromGit -CommitHash "abc123def456"
-        # Returns detailed version information with all components (major, minor, patch, etc.)
-    .OUTPUTS
-        [PSCustomObject] A comprehensive object with Success, Error, and Data properties.
-        The Data property contains version information including:
-        - Version (string): The complete version string
-        - Major, Minor, Patch (int): Version components
-        - IsPrerelease (bool): Whether this is a prerelease version
-        - PrereleaseNumber (int): The prerelease version number
-        - VersionIncrement (string): The type of increment (major, minor, patch, prerelease)
-        - IncrementReason (string): The reason for the version increment
-        - CommitRange (string): The Git commit range analyzed
+        The version to use if no tags exist. Defaults to "1.0.0".
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
@@ -464,24 +382,27 @@ function Get-VersionInfoFromGit {
 
     # Get all tags
     $tags = Get-GitTags
-    Write-Information "Found $($tags.Count) tag(s)" -Tags "Get-VersionInfoFromGit"
+    
+    # Ensure tags is always an array
+    if ($null -eq $tags) {
+        $tags = @()
+    } elseif ($tags -isnot [array]) {
+        $tags = @($tags)
+    }
+    
+    Write-Information "Found $(@($tags).Count) tag(s)" -Tags "Get-VersionInfoFromGit"
 
     # Get the last tag and its commit
     $usingFallbackTag = $false
     $lastTag = ""
 
-    if ($null -eq $tags -or
-        ($tags -is [array] -and $tags.Count -eq 0) -or
-        ($tags -is [string] -and $tags.Trim() -eq "")) {
+    if (@($tags).Count -eq 0) {
         $lastTag = "v$InitialVersion-pre.0"
         $usingFallbackTag = $true
         Write-Information "No tags found. Using fallback: $lastTag" -Tags "Get-VersionInfoFromGit"
-    } elseif ($tags -is [array]) {
+    } else {
         $lastTag = $tags[0]
         Write-Information "Using last tag: $lastTag" -Tags "Get-VersionInfoFromGit"
-    } else {
-        $lastTag = $tags
-        Write-Information "Using single tag: $lastTag" -Tags "Get-VersionInfoFromGit"
     }
 
     # Extract the version without 'v' prefix
@@ -508,7 +429,9 @@ function Get-VersionInfoFromGit {
 
     # Get the first commit in repo for fallback
     $firstCommit = "git rev-list HEAD" | Invoke-ExpressionWithLogging -Tags "Get-VersionInfoFromGit"
-    $firstCommit = $firstCommit[-1]
+    if ($firstCommit -is [array] -and @($firstCommit).Count -gt 0) {
+        $firstCommit = $firstCommit[-1]
+    }
     Write-Information "First commit: $firstCommit" -Tags "Get-VersionInfoFromGit"
 
     # Find the last tag's commit
@@ -529,6 +452,43 @@ function Get-VersionInfoFromGit {
     $incrementInfo = Get-VersionType -Range $commitRange
     $incrementType = $incrementInfo.Type
     $incrementReason = $incrementInfo.Reason
+
+    # If type is "skip", return the current version without bumping
+    if ($incrementType -eq "skip") {
+        Write-Information "Version increment type: $incrementType" -Tags "Get-VersionInfoFromGit"
+        Write-Information "Reason: $incrementReason" -Tags "Get-VersionInfoFromGit"
+        
+        # Use the same version, don't increment
+        $newVersion = $lastVersion
+
+        return [PSCustomObject]@{
+            Success = $true
+            Error = ""
+            Data = [PSCustomObject]@{
+                Version = $newVersion
+                Major = $lastMajor
+                Minor = $lastMinor
+                Patch = $lastPatch
+                IsPrerelease = $wasPrerelease
+                PrereleaseNumber = $lastPrereleaseNum
+                PrereleaseLabel = if ($wasPrerelease) { ($lastVersion -split '-')[1].Split('.')[0] } else { "pre" }
+                LastTag = $lastTag
+                LastVersion = $lastVersion
+                LastVersionMajor = $lastMajor
+                LastVersionMinor = $lastMinor
+                LastVersionPatch = $lastPatch
+                WasPrerelease = $wasPrerelease
+                LastVersionPrereleaseNumber = $lastPrereleaseNum
+                VersionIncrement = $incrementType
+                IncrementReason = $incrementReason
+                FirstCommit = $firstCommit
+                LastCommit = $CommitHash
+                LastTagCommit = $lastTagCommit
+                UsingFallbackTag = $usingFallbackTag
+                CommitRange = $commitRange
+            }
+        }
+    }
 
     # Initialize new version with current values
     $newMajor = $lastMajor
@@ -636,23 +596,12 @@ function New-Version {
     .SYNOPSIS
         Creates a new version file and sets environment variables.
     .DESCRIPTION
-        Generates a new version number based on Git history and writes it to VERSION.md.
-        This function:
-        1. Gets complete version information by analyzing Git commit history
-        2. Writes the version number to VERSION.md with proper encoding and line endings
-        3. Returns the generated version string for use in other parts of the build process
-
-        The generated version follows semantic versioning principles with proper handling of
-        prerelease versions when appropriate.
+        Generates a new version number based on git history, writes it to version files,
+        and optionally sets GitHub environment variables for use in Actions.
     .PARAMETER CommitHash
-        The Git commit hash being built (typically HEAD or the current commit).
+        The Git commit hash being built.
     .PARAMETER OutputPath
         Optional path to write the version file to. Defaults to workspace root.
-    .EXAMPLE
-        $version = New-Version -CommitHash "abc123def456"
-        # Creates VERSION.md with the calculated version number and returns the version string
-    .OUTPUTS
-        [string] The version string that was generated and written to the file.
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -682,34 +631,17 @@ function New-Version {
 function New-License {
     <#
     .SYNOPSIS
-        Creates license and copyright files from templates.
+        Creates a license file from template.
     .DESCRIPTION
-        Generates LICENSE.md and COPYRIGHT.md files using repository information and the current year.
-
-        This function:
-        1. Reads from a license template file (typically MIT license)
-        2. Replaces placeholders with project-specific information
-        3. Creates both LICENSE.md and COPYRIGHT.md files with proper encoding
-        4. Uses the current year for copyright notices
-
-        The license template should contain placeholders like {PROJECT_URL} and {COPYRIGHT}
-        which will be replaced with actual values during generation.
+        Generates a LICENSE.md file using the template and repository information.
     .PARAMETER ServerUrl
-        The GitHub server URL (e.g., "https://github.com").
+        The GitHub server URL.
     .PARAMETER Owner
-        The repository owner/organization name.
+        The repository owner/organization.
     .PARAMETER Repository
         The repository name.
     .PARAMETER OutputPath
-        Optional path to write the license files to. Defaults to workspace root.
-    .EXAMPLE
-        New-License -ServerUrl "https://github.com" -Owner "myorg" -Repository "myproject"
-        # Creates LICENSE.md and COPYRIGHT.md in the current directory
-    .EXAMPLE
-        New-License -ServerUrl "https://github.com" -Owner "myorg" -Repository "myproject" -OutputPath "./output"
-        # Creates LICENSE.md and COPYRIGHT.md in the ./output directory
-    .NOTES
-        The license template is loaded from the LICENSE.template file in the module directory.
+        Optional path to write the license file to. Defaults to workspace root.
     #>
     [CmdletBinding()]
     param (
@@ -730,7 +662,7 @@ function New-License {
     $content = Get-Content $script:LICENSE_TEMPLATE -Raw
 
     # Project URL
-    $projectUrl = "$ServerUrl/$Owner/$Repository"
+    $projectUrl = "$ServerUrl/$Repository"
     $content = $content.Replace('{PROJECT_URL}', $projectUrl)
 
     # Copyright line
@@ -758,25 +690,9 @@ function ConvertTo-FourComponentVersion {
     .SYNOPSIS
         Converts a version tag to a four-component version for comparison.
     .DESCRIPTION
-        Standardizes version tags to a four-component format (major.minor.patch.prerelease) for consistent
-        comparison and sorting in version operations. This function:
-
-        1. Removes the 'v' prefix if present
-        2. Removes any prerelease designators like '-alpha', '-beta', '-rc', '-pre'
-        3. Ensures there are always four components by adding zeros where needed
-        4. Returns a consistently formatted version string for numeric comparison
-
-        This standardization is essential for correctly ordering versions with different formats.
+        Standardizes version tags to a four-component version (major.minor.patch.prerelease) for easier comparison.
     .PARAMETER VersionTag
-        The version tag to convert (e.g., "v1.2.3-alpha.1", "v2.0.0", etc.).
-    .EXAMPLE
-        ConvertTo-FourComponentVersion -VersionTag "v1.2.3-alpha.1"
-        # Returns "1.2.3.1"
-    .EXAMPLE
-        ConvertTo-FourComponentVersion -VersionTag "v2.0.0"
-        # Returns "2.0.0.0"
-    .OUTPUTS
-        [string] A standardized four-component version string.
+        The version tag to convert.
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -805,32 +721,15 @@ function Get-VersionNotes {
     .SYNOPSIS
         Generates changelog notes for a specific version range.
     .DESCRIPTION
-        Creates formatted Markdown changelog entries for commits between two version tags.
-        This function:
-
-        1. Determines the proper version range to analyze
-        2. Filters out irrelevant commits (bot commits, merges, etc.)
-        3. Formats commit messages into Markdown bullet points with attribution
-        4. Adds appropriate headers and version type information
-
-        The resulting changelog follows a consistent format with version headings,
-        range information, and properly formatted commit listings.
+        Creates formatted changelog entries for commits between two version tags.
     .PARAMETER Tags
-        Array of all available tags in the repository for reference.
+        All available tags in the repository.
     .PARAMETER FromTag
-        The starting tag of the version range (older version).
+        The starting tag of the range.
     .PARAMETER ToTag
-        The ending tag of the version range (newer version).
+        The ending tag of the range.
     .PARAMETER ToSha
-        Optional specific commit SHA to use as the range end (used for unreleased versions).
-    .EXAMPLE
-        Get-VersionNotes -Tags @("v2.0.0", "v1.0.0") -FromTag "v1.0.0" -ToTag "v2.0.0"
-        # Returns Markdown changelog entries for all commits between v1.0.0 and v2.0.0
-    .EXAMPLE
-        Get-VersionNotes -Tags @("v1.0.0") -FromTag "v1.0.0" -ToTag "v1.1.0" -ToSha "abc123def456"
-        # Returns changelog entries for commits between v1.0.0 and the specified commit
-    .OUTPUTS
-        [string] Formatted Markdown changelog content for the specified version range.
+        Optional specific commit SHA to use as the range end.
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -948,49 +847,133 @@ function Get-VersionNotes {
     }
 
     # Get the actual commit SHA for the from tag if it exists
+    $range = ""
+    $fromSha = ""
+    $gitSuccess = $true
+    
     if ($rangeFrom -ne "") {
-        $fromSha = "git rev-list -n 1 $rangeFrom" | Invoke-ExpressionWithLogging
+        try {
+            # Try to get the SHA for the from tag, but don't error if it doesn't exist
+            $fromSha = "git rev-list -n 1 $rangeFrom 2>$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+            if ($LASTEXITCODE -ne 0) {
+                Write-Information "Warning: Could not find SHA for tag $rangeFrom. Using fallback range." -Tags "Get-VersionNotes"
+                $gitSuccess = $false
+                $fromSha = ""
+            }
 
-        # For the newest version with SHA provided (not yet tagged):
-        if ($isNewestVersion -and $ToSha -ne "") {
-            $range = "$fromSha..$ToSha"
-        } else {
-            # For already tagged versions, get the SHA for the to tag
-            $toShaResolved = "git rev-list -n 1 $rangeTo" | Invoke-ExpressionWithLogging
-            $range = "$fromSha..$toShaResolved"
+            # For the newest version with SHA provided (not yet tagged):
+            if ($isNewestVersion -and $ToSha -ne "" -and $gitSuccess) {
+                $range = "$fromSha..$ToSha"
+            } elseif ($gitSuccess) {
+                # For already tagged versions, get the SHA for the to tag
+                $toShaResolved = "git rev-list -n 1 $rangeTo 2>$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Information "Warning: Could not find SHA for tag $rangeTo. Using fallback range." -Tags "Get-VersionNotes"
+                    $gitSuccess = $false
+                }
+                else {
+                    $range = "$fromSha..$toShaResolved"
+                }
+            }
         }
-    } else {
-        # Handle case with no FROM tag (first version)
-        $range = $rangeTo
+        catch {
+            Write-Information "Error getting commit SHAs: $_" -Tags "Get-VersionNotes"
+            $gitSuccess = $false
+        }
+    }
+    
+    # Handle case with no FROM tag (first version) or failed git commands
+    if ($rangeFrom -eq "" -or -not $gitSuccess) {
+        if ($ToSha -ne "") {
+            $range = $ToSha
+        } else {
+            try {
+                $toShaResolved = "git rev-list -n 1 $rangeTo 2>$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+                if ($LASTEXITCODE -eq 0) {
+                    $range = $toShaResolved
+                } else {
+                    # If we can't resolve either tag, use HEAD as fallback
+                    $range = "HEAD"
+                }
+            }
+            catch {
+                Write-Information "Error resolving tag SHA: $_. Using HEAD instead." -Tags "Get-VersionNotes"
+                $range = "HEAD"
+            }
+        }
     }
 
     # Debug output
     Write-Information "Processing range: $range (From: $rangeFrom, To: $rangeTo)" -Tags "Get-VersionNotes"
 
-    # Try with progressively more relaxed filtering to ensure we show commits
-
-    # Get full commit info with hash to ensure uniqueness
-    $format = '%h|%s|%aN'
-
-    # First try with standard filters
-    $rawCommits = "git log --pretty=format:`"$format`" --perl-regexp --regexp-ignore-case --grep=`"$EXCLUDE_PRS`" --invert-grep --committer=`"$EXCLUDE_BOTS`" --author=`"$EXCLUDE_BOTS`" `"$range`"" | Invoke-ExpressionWithLogging
-
-    # If no commits found, try with just PR exclusion but no author filtering
-    if (($rawCommits | Measure-Object).Count -eq 0) {
-        Write-Information "No commits found with standard filters, trying with relaxed author/committer filters..." -Tags "Get-VersionNotes"
-        $rawCommits = "git log --pretty=format:`"$format`" --perl-regexp --regexp-ignore-case --grep=`"$EXCLUDE_PRS`" --invert-grep `"$range`"" | Invoke-ExpressionWithLogging
+    # For repositories with no valid tags or no commits between tags, handle gracefully
+    if ([string]::IsNullOrWhiteSpace($range) -or $range -eq ".." -or $range -match '^\s*$') {
+        Write-Information "No valid commit range found. Creating a placeholder entry." -Tags "Get-VersionNotes"
+        $versionType = "initial" # Mark as initial release
+        $versionChangelog = "## $ToTag (initial release)$script:lineEnding$script:lineEnding"
+        $versionChangelog += "Initial version.$script:lineEnding$script:lineEnding"
+        return ($versionChangelog.Trim() + $script:lineEnding)
     }
 
-    # If still no commits, try with no filtering at all - show everything in the range
-    if (($rawCommits | Measure-Object).Count -eq 0) {
-        Write-Information "Still no commits found, trying with no filters..." -Tags "Get-VersionNotes"
-        $rawCommits = "git log --pretty=format:`"$format`" `"$range`"" | Invoke-ExpressionWithLogging
+    # Try with progressively more relaxed filtering to ensure we show commits
+    $rawCommits = @()
+    
+    try {
+        # Get full commit info with hash to ensure uniqueness
+        $format = '%h|%s|%aN'
 
-        # If it's a prerelease version, include also version update commits
-        if ($versionType -eq "prerelease" -and ($rawCommits | Measure-Object).Count -eq 0) {
-            Write-Information "Looking for version update commits for prerelease..." -Tags "Get-VersionNotes"
-            $rawCommits = "git log --pretty=format:`"$format`" --grep=`"Update VERSION to`" `"$range`"" | Invoke-ExpressionWithLogging
+        # First try with standard filters
+        $rawCommits = "git log --pretty=format:`"$format`" --perl-regexp --regexp-ignore-case --grep=`"$EXCLUDE_PRS`" --invert-grep --committer=`"$EXCLUDE_BOTS`" --author=`"$EXCLUDE_BOTS`" `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+        
+        # Convert to array if needed
+        if ($null -eq $rawCommits) {
+            $rawCommits = @()
+        } elseif ($rawCommits -isnot [array]) {
+            $rawCommits = @($rawCommits)
         }
+
+        # If no commits found, try with just PR exclusion but no author filtering
+        if ($rawCommits.Count -eq 0) {
+            Write-Information "No commits found with standard filters, trying with relaxed author/committer filters..." -Tags "Get-VersionNotes"
+            $rawCommits = "git log --pretty=format:`"$format`" --perl-regexp --regexp-ignore-case --grep=`"$EXCLUDE_PRS`" --invert-grep `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+            
+            # Convert to array if needed
+            if ($null -eq $rawCommits) {
+                $rawCommits = @()
+            } elseif ($rawCommits -isnot [array]) {
+                $rawCommits = @($rawCommits)
+            }
+        }
+
+        # If still no commits, try with no filtering at all - show everything in the range
+        if ($rawCommits.Count -eq 0) {
+            Write-Information "Still no commits found, trying with no filters..." -Tags "Get-VersionNotes"
+            $rawCommits = "git log --pretty=format:`"$format`" `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+            
+            # Convert to array if needed
+            if ($null -eq $rawCommits) {
+                $rawCommits = @()
+            } elseif ($rawCommits -isnot [array]) {
+                $rawCommits = @($rawCommits)
+            }
+
+            # If it's a prerelease version, include also version update commits
+            if ($versionType -eq "prerelease" -and $rawCommits.Count -eq 0) {
+                Write-Information "Looking for version update commits for prerelease..." -Tags "Get-VersionNotes"
+                $rawCommits = "git log --pretty=format:`"$format`" --grep=`"Update VERSION to`" `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+                
+                # Convert to array if needed
+                if ($null -eq $rawCommits) {
+                    $rawCommits = @()
+                } elseif ($rawCommits -isnot [array]) {
+                    $rawCommits = @($rawCommits)
+                }
+            }
+        }
+    }
+    catch {
+        Write-Information "Error during git log operations: $_" -Tags "Get-VersionNotes"
+        $rawCommits = @()
     }
 
     # Process raw commits into structured format
@@ -1010,11 +993,11 @@ function Get-VersionNotes {
     # Get unique commits based on hash (ensures unique commits)
     $uniqueCommits = $structuredCommits | Sort-Object -Property Hash -Unique | ForEach-Object { $_.FormattedEntry }
 
-    Write-Information "Found $(($uniqueCommits | Measure-Object).Count) commits for $ToTag" -Tags "Get-VersionNotes"
+    Write-Information "Found $($uniqueCommits.Count) commits for $ToTag" -Tags "Get-VersionNotes"
 
     # Format changelog entry
     $versionChangelog = ""
-    if (($uniqueCommits | Measure-Object).Count -gt 0) {
+    if ($uniqueCommits.Count -gt 0) {
         $versionChangelog = "## $ToTag"
         if ($versionType -ne "unknown") {
             $versionChangelog += " ($versionType)"
@@ -1027,19 +1010,9 @@ function Get-VersionNotes {
 
         # Only filter out version updates for non-prerelease versions
         if ($versionType -ne "prerelease") {
-            $filteredCommits = @()
-            foreach ($commit in $uniqueCommits) {
-                if (-not $commit.Contains("Update VERSION to") -and -not $commit.Contains("[skip ci]")) {
-                    $filteredCommits += $commit
-                }
-            }
+            $filteredCommits = $uniqueCommits | Where-Object { -not $_.Contains("Update VERSION to") -and -not $_.Contains("[skip ci]") }
         } else {
-            $filteredCommits = @()
-            foreach ($commit in $uniqueCommits) {
-                if (-not $commit.Contains("[skip ci]")) {
-                    $filteredCommits += $commit
-                }
-            }
+            $filteredCommits = $uniqueCommits | Where-Object { -not $_.Contains("[skip ci]") }
         }
 
         foreach ($commit in $filteredCommits) {
@@ -1050,6 +1023,19 @@ function Get-VersionNotes {
         # For prerelease versions with no detected commits, include a placeholder entry
         $versionChangelog = "## $ToTag (prerelease)$script:lineEnding$script:lineEnding"
         $versionChangelog += "Incremental prerelease update.$script:lineEnding$script:lineEnding"
+    } else {
+        # For all other versions with no commits, create a placeholder message
+        $versionChangelog = "## $ToTag"
+        if ($versionType -ne "unknown") {
+            $versionChangelog += " ($versionType)"
+        }
+        $versionChangelog += "$script:lineEnding$script:lineEnding"
+        
+        if ($FromTag -eq "v0.0.0") {
+            $versionChangelog += "Initial release.$script:lineEnding$script:lineEnding"
+        } else {
+            $versionChangelog += "No significant changes detected since $FromTag.$script:lineEnding$script:lineEnding"
+        }
     }
 
     return ($versionChangelog.Trim() + $script:lineEnding)
@@ -1058,21 +1044,9 @@ function Get-VersionNotes {
 function New-Changelog {
     <#
     .SYNOPSIS
-        Creates a comprehensive changelog file with entries for all versions.
+        Creates a complete changelog file.
     .DESCRIPTION
-        Generates a complete CHANGELOG.md file by analyzing Git history and generating
-        formatted entries for each version. This function:
-
-        1. Gets all version tags from the repository
-        2. Analyzes commits between versions
-        3. Formats a comprehensive changelog with proper Markdown formatting
-        4. Optionally creates a separate file with only the latest version's changes
-
-        The resulting changelog is properly formatted with:
-        - Version headers with semantic version type indicators (major, minor, patch)
-        - Commit messages organized by version
-        - Author attribution with GitHub links
-        - Proper line endings and encoding
+        Generates a comprehensive CHANGELOG.md with entries for all versions.
     .PARAMETER Version
         The current version number being released.
     .PARAMETER CommitHash
@@ -1081,16 +1055,8 @@ function New-Changelog {
         Optional path to write the changelog file to. Defaults to workspace root.
     .PARAMETER IncludeAllVersions
         Whether to include all previous versions in the changelog. Defaults to $true.
-    .PARAMETER LatestChangelogPath
+    .PARAMETER LatestChangelogFile
         Optional path to write the latest version's changelog to. Defaults to "LATEST_CHANGELOG.md".
-    .EXAMPLE
-        New-Changelog -Version "2.0.0" -CommitHash "abc123def456"
-        # Creates CHANGELOG.md with entries for all versions and LATEST_CHANGELOG.md with just the latest
-    .EXAMPLE
-        New-Changelog -Version "1.5.0" -CommitHash "abc123def456" -OutputPath "./output" -IncludeAllVersions $false
-        # Creates changelog with only the latest version in the specified directory
-    .NOTES
-        The latest version changelog is particularly useful for GitHub release notes.
     #>
     [CmdletBinding()]
     param (
@@ -1100,7 +1066,7 @@ function New-Changelog {
         [string]$CommitHash,
         [string]$OutputPath = "",
         [bool]$IncludeAllVersions = $true,
-        [string]$LatestChangelogPath = "LATEST_CHANGELOG.md"
+        [string]$LatestChangelogFile = "LATEST_CHANGELOG.md"
     )
 
     # Configure git versionsort to correctly handle prereleases
@@ -1113,21 +1079,22 @@ function New-Changelog {
     $tags = Get-GitTags
     $changelog = ""
 
+    # Make sure tags is always an array
+    if ($null -eq $tags) {
+        $tags = @()
+    } elseif ($tags -isnot [array]) {
+        $tags = @($tags)
+    }
+
     # Check if we have any tags at all
-    $hasTags = $null -ne $tags -and
-              ($tags -is [array] -and $tags.Count -gt 0) -or
-              ($tags -is [string] -and $tags.Trim() -ne "")
+    $hasTags = $tags.Count -gt 0
 
     # For first release, there's no previous tag to compare against
     $previousTag = 'v0.0.0'
 
     # If we have tags, find the most recent one to compare against
     if ($hasTags) {
-        $previousTag = if ($tags -is [array]) {
-            $tags[0]  # Most recent tag
-        } else {
-            $tags  # Single tag
-        }
+        $previousTag = $tags[0]  # Most recent tag
     }
 
     # Always add entry for current/new version (comparing current commit to previous tag or initial state)
@@ -1182,12 +1149,12 @@ function New-Changelog {
     [System.IO.File]::WriteAllText($filePath, $changelog, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "New-Changelog"
 
     # Write latest version's changelog to separate file for GitHub releases
-    $latestPath = if ($OutputPath) { Join-Path $OutputPath $LatestChangelogPath } else { $LatestChangelogPath }
+    $latestPath = if ($OutputPath) { Join-Path $OutputPath $LatestChangelogFile } else { $LatestChangelogFile }
     $latestVersionNotes = $latestVersionNotes.ReplaceLineEndings($script:lineEnding)
     [System.IO.File]::WriteAllText($latestPath, $latestVersionNotes, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "New-Changelog"
     Write-Information "Latest version changelog saved to: $latestPath" -Tags "New-Changelog"
 
-    $versionCount = if ($hasTags) { @($tags).Count + 1 } else { 1 }
+    $versionCount = if ($hasTags) { $tags.Count + 1 } else { 1 }
     Write-Information "Changelog generated with entries for $versionCount versions" -Tags "New-Changelog"
 }
 
@@ -1200,48 +1167,24 @@ function Update-ProjectMetadata {
     .SYNOPSIS
         Updates project metadata files based on build configuration.
     .DESCRIPTION
-        Comprehensive function that generates and updates all project metadata files including:
-
-        1. Version information (VERSION.md)
-        2. License files (LICENSE.md and COPYRIGHT.md)
-        3. Changelog files (CHANGELOG.md and latest version changelog)
-        4. Author information (AUTHORS.md)
-        5. Project URL shortcuts (PROJECT_URL.url and AUTHORS.url)
-
-        The function also:
-        - Commits the changes to Git with proper attribution
-        - Pushes the changes to the remote repository
-        - Returns the version and commit hash for use in the release process
-
-        All files are created with consistent encoding and line endings.
+        Generates and updates version information, license, changelog, and other metadata files for a project.
+        This function centralizes all metadata generation to ensure consistency across project documentation.
     .PARAMETER BuildConfiguration
         The build configuration object containing paths, version info, and GitHub details.
         Should be obtained from Get-BuildConfiguration.
     .PARAMETER Authors
         Optional array of author names to include in the AUTHORS.md file.
-        Each name will be formatted as a bullet point in the authors file.
     .PARAMETER CommitMessage
         Optional commit message to use when committing metadata changes.
         Defaults to "[bot][skip ci] Update Metadata".
     .EXAMPLE
-        $config = Get-BuildConfiguration -ServerUrl "https://github.com" -GitRef "refs/heads/main" `
-            -GitSha "abc123" -GitHubOwner "myorg" -GitHubRepo "myproject" -GithubToken $token `
-            -NuGetApiKey $nugetKey -WorkspacePath "C:\projects\myrepo" -ExpectedOwner "myorg" `
-            -ChangelogFile "CHANGELOG.md" -AssetPatterns @("*.nupkg", "*.zip")
-
-        $result = Update-ProjectMetadata -BuildConfiguration $config
-
-        # Updates and commits all metadata files, returns object with version and commit hash
+        $config = Get-BuildConfiguration -GitRef "refs/heads/main" -GitSha "abc123" -GitHubOwner "myorg" -GitHubRepo "myproject"
+        Update-ProjectMetadata -BuildConfiguration $config
     .EXAMPLE
-        $result = Update-ProjectMetadata -BuildConfiguration $config -Authors @("Developer 1", "Developer 2") `
-            -CommitMessage "Update project documentation for release"
-
-        # Includes custom authors list and commit message
+        Update-ProjectMetadata -BuildConfiguration $config -Authors @("Developer 1", "Developer 2") -CommitMessage "Update project documentation"
     .OUTPUTS
-        [PSCustomObject] A standardized result object with:
-        - Success: Boolean indicating whether the operation succeeded
-        - Error: Error message if operation failed
-        - Data: Object containing Version, ReleaseHash, and HasChanges properties
+        PSCustomObject with Success, Error, and Data properties.
+        Data contains Version, ReleaseHash, and HasChanges information.
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
@@ -1264,10 +1207,24 @@ function Update-ProjectMetadata {
 
         Write-Information "Generating changelog..." -Tags "Update-ProjectMetadata"
         # Generate both full changelog and latest version changelog
-        New-Changelog -Version $version -CommitHash $BuildConfiguration.ReleaseHash -LatestChangelogPath $BuildConfiguration.LatestChangelogFile | Write-InformationStream -Tags "Update-ProjectMetadata"
+        try {
+            New-Changelog -Version $version -CommitHash $BuildConfiguration.ReleaseHash -LatestChangelogFile $BuildConfiguration.LatestChangelogFile | Write-InformationStream -Tags "Update-ProjectMetadata"
+        }
+        catch {
+            $errorMessage = $_.ToString()
+            Write-Information "Failed to generate complete changelog: $errorMessage" -Tags "Update-ProjectMetadata"
+            Write-Information "Creating minimal changelog instead..." -Tags "Update-ProjectMetadata"
+            
+            # Create a minimal changelog
+            $minimalChangelog = "## v$version$($script:lineEnding)$($script:lineEnding)"
+            $minimalChangelog += "Initial release or repository with no prior history.$($script:lineEnding)$($script:lineEnding)"
+            
+            [System.IO.File]::WriteAllText("CHANGELOG.md", $minimalChangelog, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "Update-ProjectMetadata"
+            [System.IO.File]::WriteAllText($BuildConfiguration.LatestChangelogFile, $minimalChangelog, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "Update-ProjectMetadata"
+        }
 
         # Create AUTHORS.md if authors are provided
-        if ($Authors.Count -gt 0) {
+        if (@($Authors).Count -gt 0) {
             Write-Information "Generating authors file..." -Tags "Update-ProjectMetadata"
             $authorsContent = "# Project Authors$script:lineEnding$script:lineEnding"
             foreach ($author in $Authors) {
@@ -1281,7 +1238,7 @@ function Update-ProjectMetadata {
         [System.IO.File]::WriteAllText("AUTHORS.url", $authorsUrl, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "Update-ProjectMetadata"
 
         # Create PROJECT_URL.url
-        $projectUrl = "[InternetShortcut]$($script:lineEnding)URL=$($BuildConfiguration.ServerUrl)/$($BuildConfiguration.GitHubOwner)/$($BuildConfiguration.GitHubRepo)"
+        $projectUrl = "[InternetShortcut]$($script:lineEnding)URL=$($BuildConfiguration.ServerUrl)/$($BuildConfiguration.GitHubRepo)"
         [System.IO.File]::WriteAllText("PROJECT_URL.url", $projectUrl, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "Update-ProjectMetadata"
 
         Write-Information "Adding files to git..." -Tags "Update-ProjectMetadata"
@@ -1372,21 +1329,9 @@ function Update-ProjectMetadata {
 function Invoke-DotNetRestore {
     <#
     .SYNOPSIS
-        Restores NuGet packages for .NET projects.
+        Restores NuGet packages.
     .DESCRIPTION
-        Executes 'dotnet restore' with locked mode to ensure consistent package restoration
-        across build environments. This function:
-
-        1. Uses locked mode to ensure package consistency
-        2. Configures the logger for appropriate verbosity
-        3. Verifies the exit code to ensure success
-
-        This should be called before any build operations to ensure dependencies are available.
-    .EXAMPLE
-        Invoke-DotNetRestore
-        # Restores all NuGet packages for the solution in the current directory
-    .NOTES
-        Uses Assert-LastExitCode to verify the operation succeeded.
+        Runs dotnet restore to get all dependencies.
     #>
     [CmdletBinding()]
     param()
@@ -1401,30 +1346,13 @@ function Invoke-DotNetRestore {
 function Invoke-DotNetBuild {
     <#
     .SYNOPSIS
-        Builds the .NET solution with specified configuration.
+        Builds the .NET solution.
     .DESCRIPTION
-        Executes 'dotnet build' with the specified configuration and build arguments.
-        This function:
-
-        1. Builds the solution with optimized settings for CI environments
-        2. Uses incremental build with configurable verbosity
-        3. Handles build failures with detailed error reporting
-        4. Automatically retries with higher verbosity on failure to provide diagnostics
-
-        The function assumes packages have been restored already (uses --no-restore).
+        Runs dotnet build with specified configuration.
     .PARAMETER Configuration
-        The build configuration to use (Debug/Release). Defaults to "Release".
+        The build configuration (Debug/Release).
     .PARAMETER BuildArgs
-        Additional build arguments to pass to the dotnet build command.
-    .EXAMPLE
-        Invoke-DotNetBuild -Configuration "Release"
-        # Builds the solution in Release mode
-    .EXAMPLE
-        Invoke-DotNetBuild -Configuration "Debug" -BuildArgs "--nologo"
-        # Builds in Debug mode with additional arguments
-    .NOTES
-        If the build fails initially, the function will retry with more detailed output
-        to help diagnose the issue.
+        Additional build arguments.
     #>
     [CmdletBinding()]
     param (
@@ -1469,26 +1397,13 @@ function Invoke-DotNetBuild {
 function Invoke-DotNetTest {
     <#
     .SYNOPSIS
-        Runs unit tests with code coverage collection.
+        Runs unit tests.
     .DESCRIPTION
-        Executes 'dotnet test' for all test projects in the solution with code coverage enabled.
-        This function:
-
-        1. Runs tests using the specified build configuration
-        2. Collects code coverage metrics using the XPlat Code Coverage collector
-        3. Outputs test results to the specified directory
-        4. Optimizes for CI environments with appropriate settings
-
-        The function assumes the build has already been completed (uses --no-build).
+        Runs dotnet test with code coverage collection.
     .PARAMETER Configuration
-        The build configuration to use for tests (Debug/Release). Defaults to "Release".
+        The build configuration (Debug/Release).
     .PARAMETER CoverageOutputPath
-        The path to output code coverage results. Defaults to "coverage".
-    .EXAMPLE
-        Invoke-DotNetTest -Configuration "Release" -CoverageOutputPath "./testresults/coverage"
-        # Runs tests in Release mode with coverage output to the specified directory
-    .NOTES
-        Uses Assert-LastExitCode to verify all tests passed successfully.
+        The path to output code coverage results.
     #>
     [CmdletBinding()]
     param (
@@ -1506,32 +1421,15 @@ function Invoke-DotNetTest {
 function Invoke-DotNetPack {
     <#
     .SYNOPSIS
-        Creates NuGet packages from .NET projects.
+        Creates NuGet packages.
     .DESCRIPTION
-        Executes 'dotnet pack' to create NuGet packages (.nupkg) and symbol packages (.snupkg).
-        This function:
-
-        1. Creates output directory if it doesn't exist
-        2. Packages either all projects or a specific project
-        3. Provides detailed logging on failure to assist with troubleshooting
-        4. Reports on successfully created packages
-
-        The function assumes the build has already been completed (uses --no-build).
+        Runs dotnet pack to create NuGet packages.
     .PARAMETER Configuration
-        The build configuration to use (Debug/Release). Defaults to "Release".
+        The build configuration (Debug/Release).
     .PARAMETER OutputPath
-        The path to output NuGet packages to. This path must be provided.
+        The path to output packages to.
     .PARAMETER Project
         Optional specific project to package. If not provided, all projects are packaged.
-    .EXAMPLE
-        Invoke-DotNetPack -Configuration "Release" -OutputPath "./packages"
-        # Packages all projects in the solution
-    .EXAMPLE
-        Invoke-DotNetPack -OutputPath "./packages" -Project "./src/MyLibrary/MyLibrary.csproj"
-        # Packages only the specified project
-    .NOTES
-        Projects must be properly configured with package metadata in the .csproj files
-        for packaging to succeed.
     #>
     [CmdletBinding()]
     param (
@@ -1591,28 +1489,17 @@ function Invoke-DotNetPack {
 function Invoke-DotNetPublish {
     <#
     .SYNOPSIS
-        Publishes .NET applications and creates distribution archives.
+        Publishes .NET applications.
     .DESCRIPTION
-        Executes 'dotnet publish' for all executable projects and creates zip archives for distribution.
-        This function:
-
-        1. Identifies all .csproj files in the solution
-        2. Publishes each project to its own output directory
-        3. Creates versioned zip archives for each published application
-        4. Provides detailed reporting on the publishing process
-
-        The function assumes the build has already been completed (uses --no-build).
+        Runs dotnet publish and creates zip archives for applications.
+        Uses the build configuration to determine output paths and version information.
     .PARAMETER Configuration
-        The build configuration to use (Debug/Release). Defaults to "Release".
+        The build configuration (Debug/Release). Defaults to "Release".
     .PARAMETER BuildConfiguration
         The build configuration object containing output paths, version, and other settings.
         This object should be obtained from Get-BuildConfiguration.
-    .EXAMPLE
-        Invoke-DotNetPublish -Configuration "Release" -BuildConfiguration $buildConfig
-        # Publishes all executable projects and creates zip archives
-    .NOTES
-        Projects that aren't configured as executables will be detected and skipped automatically.
-        The zip archives include the version number from the build configuration.
+    .OUTPUTS
+        None. Creates published applications and zip archives in the specified output paths.
     #>
     [CmdletBinding()]
     param (
@@ -1677,27 +1564,15 @@ function Invoke-DotNetPublish {
 function Invoke-NuGetPublish {
     <#
     .SYNOPSIS
-        Publishes NuGet packages to GitHub Packages and NuGet.org.
+        Publishes NuGet packages.
     .DESCRIPTION
-        Publishes all NuGet packages (.nupkg) found in the specified location to both
-        GitHub Packages and NuGet.org repositories. This function:
-
-        1. Locates all packages matching the pattern in the build configuration
-        2. First publishes to GitHub Packages using the GitHub token
-        3. Then publishes to NuGet.org using the provided API key
-        4. Uses --skip-duplicate to avoid errors when packages already exist
-        5. Reports success or failure for each repository
-
-        Requires appropriate authentication tokens to be provided in the build configuration.
+        Publishes packages to GitHub Packages and NuGet.org.
+        Uses the build configuration to determine package paths and authentication details.
     .PARAMETER BuildConfiguration
         The build configuration object containing package patterns, GitHub token, and NuGet API key.
         This object should be obtained from Get-BuildConfiguration.
-    .EXAMPLE
-        Invoke-NuGetPublish -BuildConfiguration $buildConfig
-        # Publishes all NuGet packages in the staging directory to GitHub Packages and NuGet.org
-    .NOTES
-        Requires a valid GitHub token and NuGet API key to be provided in the build configuration.
-        The function will fail if packages exist but tokens are invalid or missing.
+    .OUTPUTS
+        None. Publishes packages to the configured package repositories.
     #>
     [CmdletBinding()]
     param (
@@ -1730,32 +1605,15 @@ function Invoke-NuGetPublish {
 function New-GitHubRelease {
     <#
     .SYNOPSIS
-        Creates a new GitHub release with assets.
+        Creates a new GitHub release.
     .DESCRIPTION
-        Creates a complete GitHub release including:
-
-        1. Creating and pushing a new Git tag for the version
-        2. Creating a GitHub release associated with the tag
-        3. Generating release notes from the changelog
-        4. Uploading all specified release assets (NuGet packages, application archives, etc.)
-
-        Uses the GitHub CLI (gh) to perform all operations, requiring the GH_TOKEN environment
-        variable to be set with an appropriate GitHub token.
+        Creates a new GitHub release with the specified version, creates and pushes a git tag,
+        and uploads release assets. Uses the GitHub CLI (gh) for release creation.
     .PARAMETER BuildConfiguration
         The build configuration object containing version, commit hash, GitHub token, and asset patterns.
         This object should be obtained from Get-BuildConfiguration.
-    .EXAMPLE
-        New-GitHubRelease -BuildConfiguration $buildConfig
-        # Creates a GitHub release for the version in the build config, with all specified assets
-    .NOTES
-        Requires the GitHub CLI (gh) to be installed and properly authenticated.
-        The GitHub token must have appropriate permissions to create releases.
-
-        Release notes are generated from either:
-        1. The LATEST_CHANGELOG.md file (preferred)
-        2. The full CHANGELOG.md file (fallback)
-
-        Additionally, GitHub's automatic release notes are also included.
+    .OUTPUTS
+        None. Creates a GitHub release and uploads specified assets.
     #>
     [CmdletBinding()]
     param (
@@ -1835,14 +1693,8 @@ function Assert-LastExitCode {
     .SYNOPSIS
         Verifies that the last command executed successfully.
     .DESCRIPTION
-        Critical utility function that checks if the last executed command succeeded.
-        If the last exit code is non-zero (indicating failure), this function:
-
-        1. Formats an error message with details about the failure
-        2. Logs the error to the information stream
-        3. Throws an exception to halt the build process
-
-        This ensures that build failures are caught immediately and not silently ignored.
+        Throws an exception if the last command execution resulted in a non-zero exit code.
+        This function is used internally to ensure each step completes successfully.
     .PARAMETER Message
         The error message to display if the exit code check fails.
     .PARAMETER Command
@@ -1850,10 +1702,8 @@ function Assert-LastExitCode {
     .EXAMPLE
         dotnet build
         Assert-LastExitCode "The build process failed" -Command "dotnet build"
-        # Throws an exception if dotnet build returned a non-zero exit code
     .NOTES
-        This function is used extensively throughout the module to ensure each step completes successfully.
-        It provides a consistent error handling pattern across all operations.
+        Author: ktsu.dev
     #>
     [CmdletBinding()]
     param (
@@ -1878,23 +1728,14 @@ function Write-StepHeader {
     .SYNOPSIS
         Writes a formatted step header to the console.
     .DESCRIPTION
-        Creates a visually distinct header for build steps in the console output to improve
-        readability of the build process logs. The header is formatted with a standard style
-        to make each major step easily identifiable in the build log.
+        Creates a visually distinct header for build steps in the console output.
+        Used to improve readability of the build process logs.
     .PARAMETER Message
         The header message to display.
-    .PARAMETER Tags
-        Optional array of tags to include in the logging output for filtering and organization.
-        Defaults to "Write-StepHeader" if not provided.
     .EXAMPLE
         Write-StepHeader "Restoring Packages"
-        # Outputs: "=== Restoring Packages ==="
-    .EXAMPLE
-        Write-StepHeader "Building Solution" -Tags "Build", "MyProject"
-        # Outputs the header with the specified tags for filtering
     .NOTES
-        The format uses "===" to clearly delineate steps in the build process.
-        Line endings are added before and after for clear visual separation.
+        Author: ktsu.dev
     #>
     [CmdletBinding()]
     param (
@@ -1912,25 +1753,17 @@ function Test-AnyFiles {
     .SYNOPSIS
         Tests if any files match the specified pattern.
     .DESCRIPTION
-        Utility function that checks if any files exist matching a given glob pattern.
-        This function:
-
-        1. Uses Get-Item with error silencing to prevent errors for non-matching patterns
-        2. Returns a boolean indicating whether any matching files were found
-        3. Handles arrays properly by forcing array wrapping with @()
-
-        This is useful for determining if certain file types exist before attempting operations on them.
+        Tests if any files exist that match the given glob pattern. This is useful for
+        determining if certain file types (like packages) exist before attempting operations
+        on them.
     .PARAMETER Pattern
-        The glob pattern to check for matching files (e.g., "*.nupkg", "output/*.zip").
+        The glob pattern to check for matching files.
     .EXAMPLE
         if (Test-AnyFiles -Pattern "*.nupkg") {
             Write-Host "NuGet packages found!"
         }
-    .EXAMPLE
-        $hasLogs = Test-AnyFiles -Pattern "logs/*.log"
-        # Returns $true if any .log files exist in the logs directory
-    .OUTPUTS
-        [bool] True if any files match the pattern, false otherwise.
+    .NOTES
+        Author: ktsu.dev
     #>
     [CmdletBinding()]
     [OutputType([bool])]
@@ -1947,30 +1780,15 @@ function Test-AnyFiles {
 function Write-InformationStream {
     <#
     .SYNOPSIS
-        Streams output to the Information stream with optional tags.
+        Streams output to the console.
     .DESCRIPTION
-        Utility function that writes objects to the information stream with optional filtering tags.
-        This function:
-
-        1. Takes input from the pipeline or as a parameter
-        2. Writes each object to the information stream
-        3. Attaches tags for filtering and categorization
-
-        This provides a consistent way to handle output throughout the module.
+        Streams output to the console.
     .PARAMETER Object
-        The object to write to the information stream.
-    .PARAMETER Tags
-        Optional array of tags to include in the information output for filtering and organization.
-        Defaults to "Write-InformationStream" if not provided.
+        The object to write to the console.
     .EXAMPLE
-        "Build completed" | Write-InformationStream
-        # Outputs the string to the information stream with default tag
-    .EXAMPLE
-        & git status | Write-InformationStream -Tags "Git", "Status"
-        # Streams git status output to the information stream with custom tags
+        & git status | Write-InformationStream
     .NOTES
-        Uses Write-Information internally, which respects the $InformationPreference setting.
-        Tags are useful for filtering output when processing large logs.
+        Author: ktsu.dev
     #>
     [CmdletBinding()]
     param (
@@ -1992,35 +1810,20 @@ function Write-InformationStream {
 function Invoke-ExpressionWithLogging {
     <#
     .SYNOPSIS
-        Invokes an expression and logs the command and result.
+        Invokes an expression and logs the result to the console.
     .DESCRIPTION
-        Executes PowerShell expressions or commands with consistent logging and output handling.
-        This function:
-
-        1. Accepts either a ScriptBlock or a string command
-        2. Logs the command being executed
-        3. Executes the command and returns its output
-        4. Properly handles arrays and collections
-
-        This provides a consistent way to execute and log commands throughout the module.
+        Invokes an expression and logs the result to the console.
     .PARAMETER ScriptBlock
         The script block to execute.
     .PARAMETER Command
         A string command to execute, which will be converted to a script block.
     .PARAMETER Tags
         Optional tags to include in the logging output for filtering and organization.
-        Defaults to "Invoke-ExpressionWithLogging" if not provided.
-    .EXAMPLE
-        $result = Invoke-ExpressionWithLogging -Command "git status"
-        # Executes git status, logs the command, and returns the output
-    .EXAMPLE
-        $files = Invoke-ExpressionWithLogging { Get-ChildItem -Path "./src" -Recurse }
-        # Executes the script block and returns its result
     .OUTPUTS
-        The output of the executed command or script block.
+        The result of the expression.
     .NOTES
-        This function is useful for ensuring consistent logging across all command executions,
-        especially when debugging command failures in build scripts.
+        Author: ktsu.dev
+        This function is useful for debugging expressions that are not returning the expected results.
     #>
     [CmdletBinding()]
     param (
@@ -2046,21 +1849,9 @@ function Invoke-ExpressionWithLogging {
         }
 
         if ($ScriptBlock) {
-            # Execute the expression and capture its output
-            $output = & $ScriptBlock
-
-            # Handle different output types properly
-            if ($null -eq $output) {
-                # No output - return nothing
-                return
-            }
-            elseif ($output -is [array]) {
-                # Array output - return as is
-                return $output
-            }
-            else {
-                # Single item - return as single item
-                return $output
+            # Execute the expression and return its result
+            & $ScriptBlock | ForEach-Object {
+                Write-Output $_
             }
         }
     }
@@ -2069,27 +1860,17 @@ function Invoke-ExpressionWithLogging {
 function Get-GitLineEnding {
     <#
     .SYNOPSIS
-        Gets the correct line ending based on Git configuration.
+        Gets the correct line ending based on git config.
     .DESCRIPTION
-        Determines the appropriate line ending (LF or CRLF) based on Git configuration settings.
-        This function:
-
-        1. Checks git core.eol setting (explicit line ending configuration)
-        2. Falls back to core.autocrlf setting (line ending conversion setting)
-        3. Uses system default line ending if no Git settings are found
-
-        This ensures consistent line endings in all generated files, respecting the repository's
-        line ending configuration.
-    .EXAMPLE
-        $lineEnding = Get-GitLineEnding
-        # Returns "`n" (LF) or "`r`n" (CRLF) based on Git configuration
+        Determines whether to use LF or CRLF based on the git core.autocrlf and core.eol settings.
+        Falls back to system default line ending if no git settings are found.
     .OUTPUTS
-        [string] Returns either "`n" for LF or "`r`n" for CRLF line endings.
+        String. Returns either "`n" for LF or "`r`n" for CRLF line endings.
     .NOTES
-        The function follows Git's own line ending resolution logic:
-        - core.eol takes precedence if set ('lf' or 'crlf')
-        - core.autocrlf is checked next ('true', 'input', or 'false')
-        - System default is used as last resort
+        The function checks git settings in the following order:
+        1. core.eol setting (if set to 'lf' or 'crlf')
+        2. core.autocrlf setting ('true', 'input', or 'false')
+        3. System default line ending
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -2126,23 +1907,9 @@ function Get-GitLineEnding {
 function Set-GitIdentity {
     <#
     .SYNOPSIS
-        Configures Git user identity for automated operations.
+        Configures git user identity for automated operations.
     .DESCRIPTION
-        Sets up a standard Git user identity for automated operations like GitHub Actions.
-        This function:
-
-        1. Sets the global Git user name to "Github Actions"
-        2. Sets the global Git user email to "actions@users.noreply.github.com"
-        3. Verifies each operation succeeds
-
-        This ensures that Git operations performed by the module have proper attribution
-        and can be easily identified as automated actions.
-    .EXAMPLE
-        Set-GitIdentity
-        # Configures Git with standard GitHub Actions identity
-    .NOTES
-        This is typically used before performing Git operations like committing changes
-        and creating tags during the automated release process.
+        Sets up git user name and email globally for GitHub Actions or other automated processes.
     #>
     [CmdletBinding()]
     param()
@@ -2161,20 +1928,68 @@ function Set-GitIdentity {
 function Invoke-BuildWorkflow {
     <#
     .SYNOPSIS
-        Executes the complete build and test workflow.
+        Executes the main build workflow.
     .DESCRIPTION
-        High-level function that orchestrates the entire build and test process including:
-
-        1. Initializing the build environment
-        2. Installing any required tools (like dotnet-script if needed)
-        3. Restoring NuGet packages
-        4. Building the solution
-        5. Running tests with code coverage
-
-        This provides a single entry point for executing the build portion of the CI/CD pipeline.
+        Runs the complete build, test, and package process.
     .PARAMETER Configuration
-        The build configuration to use (Debug/Release). Defaults to "Release".
+        The build configuration (Debug/Release).
     .PARAMETER BuildArgs
+        Additional build arguments.
+    .PARAMETER BuildConfiguration
+        The build configuration object from Get-BuildConfiguration.
+    #>
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param (
+        [string]$Configuration = "Release",
+        [string]$BuildArgs = "",
+        [Parameter(Mandatory=$true)]
+        [PSCustomObject]$BuildConfiguration
+    )
+
+    try {
+        # Setup
+        Initialize-BuildEnvironment | Write-InformationStream -Tags "Invoke-BuildWorkflow"
+
+        # Install dotnet-script if needed
+        if ($BuildConfiguration.UseDotnetScript) {
+            Write-StepHeader "Installing dotnet-script" -Tags "Invoke-DotnetScript"
+            "dotnet tool install -g dotnet-script" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotnetScript"
+            Assert-LastExitCode "Failed to install dotnet-script"
+        }
+
+        # Build and Test
+        Invoke-DotNetRestore | Write-InformationStream -Tags "Invoke-BuildWorkflow"
+        Invoke-DotNetBuild -Configuration $Configuration -BuildArgs $BuildArgs | Write-InformationStream -Tags "Invoke-BuildWorkflow"
+        Invoke-DotNetTest -Configuration $Configuration -CoverageOutputPath "coverage" | Write-InformationStream -Tags "Invoke-BuildWorkflow"
+
+        return [PSCustomObject]@{
+            Success = $true
+            Error = ""
+            Data = [PSCustomObject]@{
+                Configuration = $Configuration
+                BuildArgs = $BuildArgs
+            }
+        }
+    }
+    catch {
+        Write-Information "Build workflow failed: $_" -Tags "Invoke-BuildWorkflow"
+        return [PSCustomObject]@{
+            Success = $false
+            Error = $_.ToString()
+            Data = [PSCustomObject]@{}
+            StackTrace = $_.ScriptStackTrace
+        }
+    }
+}
+
+function Invoke-ReleaseWorkflow {
+    <#
+    .SYNOPSIS
+        Executes the release workflow.
+    .DESCRIPTION
+        Generates metadata, packages, and creates a release.
+    .PARAMETER Configuration
         The build configuration (Debug/Release). Defaults to "Release".
     .PARAMETER BuildConfiguration
         The build configuration object from Get-BuildConfiguration.
@@ -2317,6 +2132,24 @@ function Invoke-CIPipeline {
             }
         }
 
+        # Get the version increment info to check if we should skip the release
+        Write-Information "Checking for significant changes..." -Tags "Invoke-CIPipeline"
+        $versionInfo = Get-VersionInfoFromGit -CommitHash $BuildConfiguration.ReleaseHash
+        
+        if ($versionInfo.Data.VersionIncrement -eq "skip") {
+            Write-Information "Skipping release: $($versionInfo.Data.IncrementReason)" -Tags "Invoke-CIPipeline"
+            return [PSCustomObject]@{
+                Success = $true
+                Error = ""
+                Data = [PSCustomObject]@{
+                    Version = $metadata.Data.Version
+                    ReleaseHash = $metadata.Data.ReleaseHash
+                    SkippedRelease = $true
+                    SkipReason = $versionInfo.Data.IncrementReason
+                }
+            }
+        }
+
         Write-Information "Running build workflow..." -Tags "Invoke-CIPipeline"
         $result = Invoke-BuildWorkflow -BuildConfiguration $BuildConfiguration
         if (-not $result.Success) {
@@ -2358,6 +2191,63 @@ function Invoke-CIPipeline {
 
 #endregion
 
+# Export public functions
+# Core build and environment functions
+Export-ModuleMember -Function Initialize-BuildEnvironment,
+                             Get-BuildConfiguration
+
+# Version management functions
+Export-ModuleMember -Function Get-GitTags,
+                             Get-VersionType,
+                             Get-VersionInfoFromGit,
+                             New-Version
+
+# Version comparison and conversion functions
+Export-ModuleMember -Function ConvertTo-FourComponentVersion,
+                             Get-VersionNotes
+
+# Metadata and documentation functions
+Export-ModuleMember -Function New-Changelog,
+                             Update-ProjectMetadata,
+                             New-License
+
+# .NET SDK operations
+Export-ModuleMember -Function Invoke-DotNetRestore,
+                             Invoke-DotNetBuild,
+                             Invoke-DotNetTest,
+                             Invoke-DotNetPack,
+                             Invoke-DotNetPublish
+
+# Release and publishing functions
+Export-ModuleMember -Function Invoke-NuGetPublish,
+                             New-GitHubRelease
+
+# Utility functions
+Export-ModuleMember -Function Assert-LastExitCode,
+                             Write-StepHeader,
+                             Test-AnyFiles,
+                             Get-GitLineEnding,
+                             Set-GitIdentity,
+                             Write-InformationStream,
+                             Invoke-ExpressionWithLogging
+
+# High-level workflow functions
+Export-ModuleMember -Function Invoke-BuildWorkflow,
+                             Invoke-ReleaseWorkflow,
+                             Invoke-CIPipeline
+
 #region Module Variables
 $script:DOTNET_VERSION = '9.0'
 $script:LICENSE_TEMPLATE = Join-Path $PSScriptRoot "LICENSE.template"
+
+# Set PowerShell preferences
+$ErrorActionPreference = 'Stop'
+$WarningPreference = 'Stop'
+$InformationPreference = 'Continue'
+$DebugPreference = 'Ignore'
+$VerbosePreference = 'Ignore'
+$ProgressPreference = 'Ignore'
+
+# Get the line ending for the current system
+$script:lineEnding = Get-GitLineEnding
+#endregion
