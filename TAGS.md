@@ -1,0 +1,1 @@
+.NET;C#;deep clone;cloning;object copying;object cloning;interface;library;MIT License;lightweight;generic;reference types;immutable;collections;thread safety;performance;circular references;inheritance;polymorphism;immutable collections

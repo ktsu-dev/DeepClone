@@ -1,2 +1,5 @@
-<Project Sdk="ktsu.Sdk.Test/1.8.0">
+﻿<Project Sdk="ktsu.Sdk.Test/1.11.0">
+  <ItemGroup>
+    <PackageReference Include="ktsu.Extensions" Version="1.5.5" />
+  </ItemGroup>
 </Project>

@@ -1,6 +1,6 @@
 MIT License
 
-https://github.com/ktsu-dev/ktsu-dev/DeepClone
+https://github.com/ktsu-dev/DeepClone
 
 Copyright (c) 2023-2025 ktsu-dev
 
