@@ -76,7 +76,7 @@ public abstract class DeepCloneable<TDerived> : IDeepCloneable
 	/// <remarks>
 	/// This method should be overridden to copy all fields and properties.
 	/// For reference type properties, call DeepClone() on them.
-	/// For collections, use the DeepCloneFrom extension methods.
+	/// For collections, use the DeepCloneFrom extension methods. 
 	/// 
 	/// Example implementation:
 	/// <code>
