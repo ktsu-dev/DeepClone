@@ -14,7 +14,7 @@ public class Container : DeepCloneable<Container>
 	/// <summary>
 	/// Gets the collection of base objects.
 	/// </summary>
-	public Collection<IBaseObject> DerivedObjects { get; } = [];
+	public Collection<IBaseObject> DerivedObjects { get; init; } = [];
 
 	/// <inheritdoc/>
 	protected override Container CreateInstance() => new();

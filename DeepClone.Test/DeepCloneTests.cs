@@ -7,7 +7,6 @@ namespace ktsu.DeepClone.Test;
 using System.Collections.ObjectModel;
 using ktsu.DeepClone.Test.Mocks;
 using ktsu.DeepClone.Test.Mocks.Shapes;
-using ktsu.Extensions;
 
 /// <summary>
 /// Contains tests for deep cloning functionality.
@@ -102,12 +101,14 @@ public class DeepCloneTests
 	public void PolymorphicObject_DeepClone_ShouldMaintainTypeHierarchy()
 	{
 		// Arrange
-		var original = new Container();
-		original.DerivedObjects.ReplaceWith
-		([
-			new DerivedObjectA { Id = 1, Name = "A", SpecialPropertyA = "SpecialA" },
-			new DerivedObjectB { Id = 2, Name = "B", SpecialPropertyB = 42 },
-		]);
+		Container original = new()
+		{
+			DerivedObjects =
+			[
+				new DerivedObjectA { Id = 1, Name = "A", SpecialPropertyA = "SpecialA" },
+				new DerivedObjectB { Id = 2, Name = "B", SpecialPropertyB = 42 },
+			]
+		};
 
 		// Act
 		var clone = original.DeepClone();
@@ -149,19 +150,19 @@ public class DeepCloneTests
 	public void NestedGenericCollections_DeepClone_ShouldCreateIndependentCopies()
 	{
 		// Arrange
-		var original = new GenericCollectionContainer<SimpleObject>();
-
-		original.Items.ReplaceWith
-		([
-			new() { Id = 1, Name = "Item1" },
-			new() { Id = 2, Name = "Item2" }
-		]);
-
-		original.ItemsMapping.ReplaceWith
-		([
-			new( "key1", new SimpleObject { Id = 3, Name = "MappedItem1" }),
-			new( "key2", new SimpleObject { Id = 4, Name = "MappedItem2" }),
-		]);
+		GenericCollectionContainer<SimpleObject> original = new()
+		{
+			Items =
+			{
+				new SimpleObject { Id = 1, Name = "Item1" },
+				new SimpleObject { Id = 2, Name = "Item2" }
+			},
+			ItemsMapping =
+			{
+				["key1"] = new SimpleObject { Id = 3, Name = "MappedItem1" },
+				["key2"] = new SimpleObject { Id = 4, Name = "MappedItem2" }
+			}
+		};
 
 		// Act
 		var clone = original.DeepClone();
@@ -239,12 +240,14 @@ public class DeepCloneTests
 	public void AbstractBaseClass_DeepClone_ShouldCreateCorrectDerivedTypes()
 	{
 		// Arrange
-		var original = new ShapeContainer();
-		original.Shapes.ReplaceWith
-		([
-			new Circle { Id = 1, Name = "Circle1", Radius = 5.0 },
-			new Rectangle { Id = 2, Name = "Rectangle1", Width = 10.0, Height = 20.0 }
-		]);
+		ShapeContainer original = new()
+		{
+			Shapes =
+			{
+				new Circle { Id = 1, Name = "Circle1", Radius = 5.0 },
+				new Rectangle { Id = 2, Name = "Rectangle1", Width = 10.0, Height = 20.0 }
+			}
+		};
 
 		// Act
 		var clone = original.DeepClone();

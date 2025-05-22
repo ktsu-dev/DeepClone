@@ -15,12 +15,12 @@ public class GenericCollectionContainer<TItem> : DeepCloneable<GenericCollection
 	/// <summary>
 	/// Gets the collection of items.
 	/// </summary>
-	public Collection<TItem> Items { get; } = [];
+	public Collection<TItem> Items { get; init; } = [];
 
 	/// <summary>
 	/// Gets the dictionary of items.
 	/// </summary>
-	public Dictionary<string, TItem> ItemsMapping { get; } = [];
+	public Dictionary<string, TItem> ItemsMapping { get; init; } = [];
 
 	protected override GenericCollectionContainer<TItem> CreateInstance() => new();
 
