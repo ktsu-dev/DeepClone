@@ -22,6 +22,7 @@ public class GenericCollectionContainer<TItem> : DeepCloneable<GenericCollection
 	/// </summary>
 	public Dictionary<string, TItem> ItemsMapping { get; init; } = [];
 
+	/// <inheritdoc/>
 	protected override GenericCollectionContainer<TItem> CreateInstance() => new();
 
 	/// <inheritdoc/>

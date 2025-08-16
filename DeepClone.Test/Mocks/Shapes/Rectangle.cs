@@ -35,8 +35,10 @@ public class Rectangle : Shape<Rectangle>, IRectangle
 	/// </summary>
 	public double Height { get; set; }
 
+	/// <inheritdoc/>
 	protected override Rectangle CreateInstance() => new();
 
+	/// <inheritdoc/>
 	protected override void DeepClone(Rectangle clone)
 	{
 		ArgumentNullException.ThrowIfNull(clone);

@@ -25,6 +25,7 @@ public class Circle : Shape<Circle>, ICircle
 	/// </summary>
 	public double Radius { get; set; }
 
+	/// <inheritdoc/>
 	protected override Circle CreateInstance() => new();
 
 	/// <inheritdoc/>

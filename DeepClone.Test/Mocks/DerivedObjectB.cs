@@ -25,8 +25,10 @@ public class DerivedObjectB : BaseObject<DerivedObjectB>, IDerivedObjectB
 	/// </summary>
 	public int SpecialPropertyB { get; set; }
 
+	/// <inheritdoc/>
 	protected override DerivedObjectB CreateInstance() => new();
 
+	/// <inheritdoc/>
 	protected override void DeepClone(DerivedObjectB clone)
 	{
 		ArgumentNullException.ThrowIfNull(clone);
