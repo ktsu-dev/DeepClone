@@ -22,7 +22,7 @@ using System.Collections.Concurrent;
 /// <description>Ensure the entire inheritance chain properly implements DeepClone with base.DeepClone calls</description>
 /// </item>
 /// </list>
-/// 
+///
 /// For example, in a class hierarchy like Animal → Mammal → Dog:
 /// <code>
 /// // In Dog class
@@ -30,25 +30,25 @@ using System.Collections.Concurrent;
 /// {
 ///     // Always call base first to handle Mammal properties
 ///     base.DeepClone(clone);
-///     
+///
 ///     // Then clone Dog-specific properties
 ///     clone.Breed = Breed;
 ///     clone.IsTrained = IsTrained;
 /// }
-/// 
+///
 /// // In Mammal class
 /// protected override void DeepClone(Mammal clone)
 /// {
 ///     // Always call base first to handle Animal properties
 ///     base.DeepClone(clone);
-///     
+///
 ///     // Then clone Mammal-specific properties
 ///     clone.FurColor = FurColor;
 ///     clone.IsWarmBlooded = IsWarmBlooded;
 /// }
 /// </code>
-/// 
-/// This chaining of base.DeepClone calls ensures that all properties throughout the inheritance 
+///
+/// This chaining of base.DeepClone calls ensures that all properties throughout the inheritance
 /// hierarchy are properly cloned, even in multi-threaded scenarios.
 /// </remarks>
 [TestClass]
@@ -61,7 +61,7 @@ public class ThreadSafetyTests
 	public void ConcurrentOperations_DeepClone_ShouldWorkCorrectly()
 	{
 		// Arrange - create a complex object
-		var original = new ComplexObject
+		ComplexObject original = new()
 		{
 			Id = 1,
 			Name = "Parent",
@@ -73,19 +73,19 @@ public class ThreadSafetyTests
 		};
 
 		// Create collection to hold results
-		var results = new ConcurrentBag<ComplexObject>();
+		ConcurrentBag<ComplexObject> results = [];
 
 		// Act - clone the object concurrently from multiple threads
 		Parallel.For(0, 100, _ =>
 		{
-			var clone = original.DeepClone();
+			ComplexObject clone = original.DeepClone();
 			results.Add(clone);
 		});
 
 		// Assert - verify all clones are independent copies
 		Assert.AreEqual(100, results.Count);
 
-		foreach (var clone in results)
+		foreach (ComplexObject clone in results)
 		{
 			// Each clone should have the same values
 			Assert.AreEqual(1, clone.Id);
@@ -118,16 +118,16 @@ public class ThreadSafetyTests
 	public void ConcurrentCollection_DeepClone_ShouldWorkCorrectly()
 	{
 		// Arrange
-		var original = new ConcurrentDictionary<int, SimpleObject>();
+		ConcurrentDictionary<int, SimpleObject> original = new();
 
 		// Add some items
-		for (var i = 0; i < 10; i++)
+		for (int i = 0; i < 10; i++)
 		{
 			original.TryAdd(i, new SimpleObject { Id = i, Name = $"Item{i}" });
 		}
 
 		// Act
-		var clone = original.ToDictionary(
+		ConcurrentDictionary<int, SimpleObject> clone = original.ToDictionary(
 			pair => pair.Key,
 			pair => pair.Value.DeepClone())
 			.ToConcurrentDictionary();
@@ -136,7 +136,7 @@ public class ThreadSafetyTests
 		Assert.AreEqual(10, clone.Count);
 
 		// Check all items were cloned correctly
-		for (var i = 0; i < 10; i++)
+		for (int i = 0; i < 10; i++)
 		{
 			Assert.IsTrue(clone.ContainsKey(i));
 			Assert.AreEqual(i, clone[i].Id);
@@ -146,14 +146,14 @@ public class ThreadSafetyTests
 		// Verify independence
 		Parallel.For(0, 10, i =>
 		{
-			if (clone.TryGetValue(i, out var item))
+			if (clone.TryGetValue(i, out SimpleObject? item))
 			{
 				item.Name = $"Modified{i}";
 			}
 		});
 
 		// Original should be unchanged
-		for (var i = 0; i < 10; i++)
+		for (int i = 0; i < 10; i++)
 		{
 			Assert.AreEqual($"Item{i}", original[i].Name);
 			Assert.AreEqual($"Modified{i}", clone[i].Name);

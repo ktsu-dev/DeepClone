@@ -21,7 +21,7 @@ namespace ktsu.DeepClone;
 /// <description>Allowing derived classes to focus on just creating instances and copying fields</description>
 /// </item>
 /// </list>
-/// 
+///
 /// To implement in a derived class:
 /// <list type="number">
 /// <item>
@@ -48,7 +48,7 @@ public abstract class DeepCloneable<TDerived> : IDeepCloneable
 	/// </remarks>
 	public TDerived DeepClone()
 	{
-		var clone = CreateInstance();
+		TDerived clone = CreateInstance();
 		DeepClone(clone);
 		return clone;
 	}
@@ -76,8 +76,8 @@ public abstract class DeepCloneable<TDerived> : IDeepCloneable
 	/// <remarks>
 	/// This method should be overridden to copy all fields and properties.
 	/// For reference type properties, call DeepClone() on them.
-	/// For collections, use the DeepCloneFrom extension methods. 
-	/// 
+	/// For collections, use the DeepCloneFrom extension methods.
+	///
 	/// Example implementation:
 	/// <code>
 	/// protected override void DeepClone(MyClass clone)

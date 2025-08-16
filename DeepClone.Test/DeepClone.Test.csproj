@@ -1,2 +1,8 @@
-﻿<Project Sdk="ktsu.Sdk.Test/1.30.0">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="ktsu.Sdk" />
+  <Sdk Name="ktsu.Sdk.Test" />
+
+  <PropertyGroup>
+    <TargetFrameworks>net9.0;net8.0;</TargetFrameworks>
+  </PropertyGroup>
 </Project>

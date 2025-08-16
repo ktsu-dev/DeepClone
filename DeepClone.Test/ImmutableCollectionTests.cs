@@ -22,7 +22,7 @@ using System.Collections.Immutable;
 /// <description>For inheritance hierarchies, the chain of base.DeepClone calls ensures complete cloning of the entire object graph</description>
 /// </item>
 /// </list>
-/// 
+///
 /// See the Shape, Rectangle, and Circle classes in the Mocks.Shapes namespace for examples of properly implemented inheritance with DeepClone.
 /// </remarks>
 [TestClass]
@@ -35,17 +35,17 @@ public class ImmutableCollectionTests
 	public void ImmutableArray_DeepClone_ShouldCreateIndependentCopy()
 	{
 		// Arrange
-		var sourceItems = new List<SimpleObject>
-			{
+		List<SimpleObject> sourceItems =
+		[
 				new() { Id = 1, Name = "Item1" },
 				new() { Id = 2, Name = "Item2" }
-			};
+			];
 
 		ImmutableArray<SimpleObject> original = [.. sourceItems];
 
 		// Act
-		var cloneEnumerable = DeepCloneContainerExtensions.DeepClone(original);
-		var clone = cloneEnumerable.ToImmutableArray();
+		IEnumerable<SimpleObject> cloneEnumerable = DeepCloneContainerExtensions.DeepClone(original);
+		ImmutableArray<SimpleObject> clone = [.. cloneEnumerable];
 
 		// Assert
 		Assert.IsNotNull(clone);
@@ -58,9 +58,9 @@ public class ImmutableCollectionTests
 		Assert.AreEqual("Item2", clone[1].Name);
 
 		// Verify independence by modifying clone items
-		var builder = clone.ToBuilder();
+		ImmutableArray<SimpleObject>.Builder builder = clone.ToBuilder();
 		builder[0].Name = "Modified";
-		var modifiedClone = builder.ToImmutable();
+		ImmutableArray<SimpleObject> modifiedClone = builder.ToImmutable();
 
 		// Original should be unchanged
 		Assert.AreEqual("Item1", original[0].Name);
@@ -74,17 +74,17 @@ public class ImmutableCollectionTests
 	public void ImmutableList_DeepClone_ShouldCreateIndependentCopy()
 	{
 		// Arrange
-		var sourceItems = new List<SimpleObject>
-			{
+		List<SimpleObject> sourceItems =
+		[
 				new() { Id = 1, Name = "Item1" },
 				new() { Id = 2, Name = "Item2" }
-			};
+			];
 
 		ImmutableList<SimpleObject> original = [.. sourceItems];
 
 		// Act
-		var cloneEnumerable = DeepCloneContainerExtensions.DeepClone(original);
-		var clone = cloneEnumerable.ToImmutableList();
+		IEnumerable<SimpleObject> cloneEnumerable = DeepCloneContainerExtensions.DeepClone(original);
+		ImmutableList<SimpleObject> clone = [.. cloneEnumerable];
 
 		// Assert
 		Assert.IsNotNull(clone);
@@ -97,9 +97,9 @@ public class ImmutableCollectionTests
 		Assert.AreEqual("Item2", clone[1].Name);
 
 		// Verify independence by modifying clone items
-		var builder = clone.ToBuilder();
+		ImmutableList<SimpleObject>.Builder builder = clone.ToBuilder();
 		builder[0].Name = "Modified";
-		var modifiedClone = builder.ToImmutable();
+		ImmutableList<SimpleObject> modifiedClone = builder.ToImmutable();
 
 		// Original should be unchanged
 		Assert.AreEqual("Item1", original[0].Name);
@@ -113,22 +113,22 @@ public class ImmutableCollectionTests
 	public void ImmutableDictionary_DeepClone_ShouldCreateIndependentCopy()
 	{
 		// Arrange
-		var sourceItems = new Dictionary<int, SimpleObject>
-			{
+		Dictionary<int, SimpleObject> sourceItems = new()
+		{
 				{ 1, new SimpleObject { Id = 1, Name = "Item1" } },
 				{ 2, new SimpleObject { Id = 2, Name = "Item2" } }
 			};
 
-		var original = sourceItems.ToImmutableDictionary();
+		ImmutableDictionary<int, SimpleObject> original = sourceItems.ToImmutableDictionary();
 
 		// Act - create new objects to avoid shared references
-		var clonedDictionary = new Dictionary<int, SimpleObject>();
-		foreach (var kvp in original)
+		Dictionary<int, SimpleObject> clonedDictionary = [];
+		foreach (KeyValuePair<int, SimpleObject> kvp in original)
 		{
 			clonedDictionary.Add(kvp.Key, kvp.Value.DeepClone());
 		}
 
-		var clone = clonedDictionary.ToImmutableDictionary();
+		ImmutableDictionary<int, SimpleObject> clone = clonedDictionary.ToImmutableDictionary();
 
 		// Assert
 		Assert.IsNotNull(clone);
@@ -141,9 +141,9 @@ public class ImmutableCollectionTests
 		Assert.AreEqual("Item2", clone[2].Name);
 
 		// Verify independence by modifying clone items
-		var builder = clone.ToBuilder();
+		ImmutableDictionary<int, SimpleObject>.Builder builder = clone.ToBuilder();
 		builder[1].Name = "Modified";
-		var modifiedClone = builder.ToImmutable();
+		ImmutableDictionary<int, SimpleObject> modifiedClone = builder.ToImmutable();
 
 		// Original should be unchanged
 		Assert.AreEqual("Item1", original[1].Name);
@@ -157,39 +157,39 @@ public class ImmutableCollectionTests
 	public void ImmutableHashSet_DeepClone_ShouldCreateIndependentCopy()
 	{
 		// Arrange
-		var sourceItems = new HashSet<SimpleObject>
-			{
+		HashSet<SimpleObject> sourceItems =
+		[
 				new() { Id = 1, Name = "Item1" },
 				new() { Id = 2, Name = "Item2" }
-			};
+			];
 
 		ImmutableHashSet<SimpleObject> original = [.. sourceItems];
 
 		// Act
-		var cloneEnumerable = DeepCloneContainerExtensions.DeepClone(original);
-		var clone = cloneEnumerable.ToImmutableHashSet();
+		IEnumerable<SimpleObject> cloneEnumerable = DeepCloneContainerExtensions.DeepClone(original);
+		ImmutableHashSet<SimpleObject> clone = [.. cloneEnumerable];
 
 		// Assert
 		Assert.IsNotNull(clone);
 		Assert.AreEqual(original.Count, clone.Count);
 
 		// Find the items in the clone by ID
-		var item1Clone = clone.First(item => item.Id == 1);
-		var item2Clone = clone.First(item => item.Id == 2);
+		SimpleObject item1Clone = clone.First(item => item.Id == 1);
+		SimpleObject item2Clone = clone.First(item => item.Id == 2);
 
 		// Check values were copied correctly
 		Assert.AreEqual("Item1", item1Clone.Name);
 		Assert.AreEqual("Item2", item2Clone.Name);
 
 		// Verify independence by modifying clone items
-		var builder = clone.ToBuilder();
-		var itemToModify = builder.First(item => item.Id == 1);
+		ImmutableHashSet<SimpleObject>.Builder builder = clone.ToBuilder();
+		SimpleObject itemToModify = builder.First(item => item.Id == 1);
 		itemToModify.Name = "Modified";
-		var modifiedClone = builder.ToImmutable();
+		ImmutableHashSet<SimpleObject> modifiedClone = builder.ToImmutable();
 
 		// Original should be unchanged
-		var originalItem1 = original.First(item => item.Id == 1);
-		var modifiedItem1 = modifiedClone.First(item => item.Id == 1);
+		SimpleObject originalItem1 = original.First(item => item.Id == 1);
+		SimpleObject modifiedItem1 = modifiedClone.First(item => item.Id == 1);
 		Assert.AreEqual("Item1", originalItem1.Name);
 		Assert.AreEqual("Modified", modifiedItem1.Name);
 	}
@@ -201,31 +201,31 @@ public class ImmutableCollectionTests
 	public void ImmutableSortedDictionary_DeepClone_ShouldCreateIndependentCopy()
 	{
 		// Arrange
-		var sourceItems = new SortedDictionary<int, SimpleObject>
-			{
+		SortedDictionary<int, SimpleObject> sourceItems = new()
+		{
 				{ 2, new SimpleObject { Id = 2, Name = "Item2" } },
 				{ 1, new SimpleObject { Id = 1, Name = "Item1" } }
 			};
 
-		var original =
+		ImmutableSortedDictionary<int, SimpleObject> original =
 			sourceItems.ToImmutableSortedDictionary();
 
 		// Act - create new objects to avoid shared references
-		var clonedDictionary = new SortedDictionary<int, SimpleObject>();
-		foreach (var kvp in original)
+		SortedDictionary<int, SimpleObject> clonedDictionary = [];
+		foreach (KeyValuePair<int, SimpleObject> kvp in original)
 		{
 			clonedDictionary.Add(kvp.Key, kvp.Value.DeepClone());
 		}
 
-		var clone = clonedDictionary.ToImmutableSortedDictionary();
+		ImmutableSortedDictionary<int, SimpleObject> clone = clonedDictionary.ToImmutableSortedDictionary();
 
 		// Assert
 		Assert.IsNotNull(clone);
 		Assert.AreEqual(original.Count, clone.Count);
 
 		// Check ordering
-		var originalKeys = original.Keys.ToArray();
-		var cloneKeys = clone.Keys.ToArray();
+		int[] originalKeys = [.. original.Keys];
+		int[] cloneKeys = [.. clone.Keys];
 		Assert.AreEqual(1, originalKeys[0]);
 		Assert.AreEqual(1, cloneKeys[0]);
 		Assert.AreEqual(2, originalKeys[1]);
@@ -238,9 +238,9 @@ public class ImmutableCollectionTests
 		Assert.AreEqual("Item2", clone[2].Name);
 
 		// Verify independence by modifying clone items
-		var builder = clone.ToBuilder();
+		ImmutableSortedDictionary<int, SimpleObject>.Builder builder = clone.ToBuilder();
 		builder[1].Name = "Modified";
-		var modifiedClone = builder.ToImmutable();
+		ImmutableSortedDictionary<int, SimpleObject> modifiedClone = builder.ToImmutable();
 
 		// Original should be unchanged
 		Assert.AreEqual("Item1", original[1].Name);
@@ -254,27 +254,27 @@ public class ImmutableCollectionTests
 	public void ImmutableSortedSet_DeepClone_ShouldCreateIndependentCopy()
 	{
 		// Arrange
-		var comparer = Comparer<SimpleObject>.Create((x, y) => x.Id.CompareTo(y.Id));
-		var sourceItems = new SortedSet<SimpleObject>(comparer)
+		Comparer<SimpleObject> comparer = Comparer<SimpleObject>.Create((x, y) => x.Id.CompareTo(y.Id));
+		SortedSet<SimpleObject> sourceItems = new(comparer)
 			{
 				new() { Id = 2, Name = "Item2" },
 				new() { Id = 1, Name = "Item1" }
 			};
 
-		var original =
+		ImmutableSortedSet<SimpleObject> original =
 			sourceItems.ToImmutableSortedSet(comparer);
 
 		// Act
-		var cloneEnumerable = DeepCloneContainerExtensions.DeepClone(original);
-		var clone = cloneEnumerable.ToImmutableSortedSet(comparer);
+		IEnumerable<SimpleObject> cloneEnumerable = DeepCloneContainerExtensions.DeepClone(original);
+		ImmutableSortedSet<SimpleObject> clone = cloneEnumerable.ToImmutableSortedSet(comparer);
 
 		// Assert
 		Assert.IsNotNull(clone);
 		Assert.AreEqual(original.Count, clone.Count);
 
 		// Check ordering (should be sorted by ID)
-		var originalArray = original.ToArray();
-		var cloneArray = clone.ToArray();
+		SimpleObject[] originalArray = [.. original];
+		SimpleObject[] cloneArray = [.. clone];
 		Assert.AreEqual(1, originalArray[0].Id);
 		Assert.AreEqual(1, cloneArray[0].Id);
 		Assert.AreEqual(2, originalArray[1].Id);
@@ -285,10 +285,10 @@ public class ImmutableCollectionTests
 		Assert.AreEqual("Item2", cloneArray[1].Name);
 
 		// Verify independence by modifying clone items
-		var builder = clone.ToBuilder();
-		var itemToModify = builder.First();
+		ImmutableSortedSet<SimpleObject>.Builder builder = clone.ToBuilder();
+		SimpleObject itemToModify = builder.First();
 		itemToModify.Name = "Modified";
-		var modifiedClone = builder.ToImmutable();
+		ImmutableSortedSet<SimpleObject> modifiedClone = builder.ToImmutable();
 
 		// Original should be unchanged
 		Assert.AreEqual("Item1", originalArray[0].Name);
@@ -302,7 +302,7 @@ public class ImmutableCollectionTests
 	public void ImmutableQueue_DeepClone_ShouldCreateIndependentCopy()
 	{
 		// Arrange
-		var sourceItems = new Queue<SimpleObject>();
+		Queue<SimpleObject> sourceItems = new();
 		sourceItems.Enqueue(new SimpleObject { Id = 1, Name = "Item1" });
 		sourceItems.Enqueue(new SimpleObject { Id = 2, Name = "Item2" });
 
@@ -310,24 +310,24 @@ public class ImmutableCollectionTests
 		[.. sourceItems];
 
 		// Act
-		var cloneEnumerable = DeepCloneContainerExtensions.DeepClone(original);
+		IEnumerable<SimpleObject> cloneEnumerable = DeepCloneContainerExtensions.DeepClone(original);
 		// Need to use ImmutableQueue.Create since no extension method exists
-		var clone = ImmutableQueue.CreateRange(cloneEnumerable);
+		ImmutableQueue<SimpleObject> clone = [.. cloneEnumerable];
 
 		// Assert
 		Assert.IsNotNull(clone);
 
 		// Check queue operations
-		var originalPeek = original.Peek();
-		var clonePeek = clone.Peek();
+		SimpleObject originalPeek = original.Peek();
+		SimpleObject clonePeek = clone.Peek();
 		Assert.AreEqual(1, originalPeek.Id);
 		Assert.AreEqual(1, clonePeek.Id);
 		Assert.AreEqual("Item1", originalPeek.Name);
 		Assert.AreEqual("Item1", clonePeek.Name);
 
-		// Verify independence 
-		var item = clone.Peek();
-		var updatedClone = clone.Dequeue();
+		// Verify independence
+		SimpleObject item = clone.Peek();
+		ImmutableQueue<SimpleObject> updatedClone = clone.Dequeue();
 		item.Name = "Modified";
 
 		// Original should be unchanged
@@ -341,13 +341,13 @@ public class ImmutableCollectionTests
 	public void ImmutableStack_DeepClone_ShouldCreateIndependentCopy()
 	{
 		// Arrange - build the stack with highest ID on top
-		var original = ImmutableStack<SimpleObject>.Empty
+		ImmutableStack<SimpleObject> original = ImmutableStack<SimpleObject>.Empty
 			.Push(new SimpleObject { Id = 1, Name = "Item1" })
 			.Push(new SimpleObject { Id = 2, Name = "Item2" });
 
 		// Act - do manual deep cloning to ensure we get proper results
-		var clonedItems = new List<SimpleObject>();
-		foreach (var stackItem in original)
+		List<SimpleObject> clonedItems = [];
+		foreach (SimpleObject stackItem in original)
 		{
 			clonedItems.Add(stackItem.DeepClone());
 		}
@@ -355,8 +355,8 @@ public class ImmutableCollectionTests
 		// Now rebuild the stack in the same order
 		// Since ImmutableStack.CreateRange would reverse the order again,
 		// we need to start from Empty and push items manually
-		var clone = ImmutableStack<SimpleObject>.Empty;
-		foreach (var stackItem in clonedItems.AsEnumerable().Reverse())
+		ImmutableStack<SimpleObject> clone = [];
+		foreach (SimpleObject? stackItem in clonedItems.AsEnumerable().Reverse())
 		{
 			clone = clone.Push(stackItem);
 		}
@@ -365,16 +365,16 @@ public class ImmutableCollectionTests
 		Assert.IsNotNull(clone);
 
 		// Check stack operations
-		var originalPeek = original.Peek();
-		var clonePeek = clone.Peek();
+		SimpleObject originalPeek = original.Peek();
+		SimpleObject clonePeek = clone.Peek();
 		Assert.AreEqual(2, originalPeek.Id);
 		Assert.AreEqual(2, clonePeek.Id);
 		Assert.AreEqual("Item2", originalPeek.Name);
 		Assert.AreEqual("Item2", clonePeek.Name);
 
 		// Verify independence
-		var topItem = clone.Peek();
-		var updatedClone = clone.Pop();
+		SimpleObject topItem = clone.Peek();
+		ImmutableStack<SimpleObject> updatedClone = clone.Pop();
 		topItem.Name = "Modified";
 
 		// Original should be unchanged

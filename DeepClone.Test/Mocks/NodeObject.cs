@@ -56,7 +56,7 @@ public class NodeObject : DeepCloneable<NodeObject>
 		clone.Children.DeepCloneFrom(Children);
 
 		// maintain references
-		foreach (var child in clone.Children)
+		foreach (NodeObject child in clone.Children)
 		{
 			child.Parent = clone;
 		}

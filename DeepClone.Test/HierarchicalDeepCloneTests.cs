@@ -19,7 +19,7 @@ public class HierarchicalDeepCloneTests
 	public void Dog_DeepClone_ShouldClonePropertiesFromEntireHierarchy()
 	{
 		// Arrange
-		var original = new Dog
+		Dog original = new()
 		{
 			Name = "Rex",
 			Age = 5,
@@ -30,8 +30,8 @@ public class HierarchicalDeepCloneTests
 		};
 
 		// Act
-		var clone = original.DeepClone();
-		var dogClone = clone;
+		Dog clone = original.DeepClone();
+		Dog dogClone = clone;
 
 		// Assert
 		Assert.IsInstanceOfType<Dog>(clone);
@@ -56,7 +56,7 @@ public class HierarchicalDeepCloneTests
 	public void Dog_ModifyClone_ShouldNotAffectOriginal()
 	{
 		// Arrange
-		var original = new Dog
+		Dog original = new()
 		{
 			Name = "Rex",
 			Age = 5,
@@ -67,8 +67,8 @@ public class HierarchicalDeepCloneTests
 		};
 
 		// Act
-		var clone = original.DeepClone();
-		var dogClone = clone;
+		Dog clone = original.DeepClone();
+		Dog dogClone = clone;
 
 		// Modify all properties in the clone
 		dogClone.Name = "Rover";
@@ -94,7 +94,7 @@ public class HierarchicalDeepCloneTests
 	public void Cat_DeepClone_ShouldClonePropertiesFromEntireHierarchy()
 	{
 		// Arrange
-		var original = new Cat
+		Cat original = new()
 		{
 			Name = "Whiskers",
 			Age = 3,
@@ -105,8 +105,8 @@ public class HierarchicalDeepCloneTests
 		};
 
 		// Act
-		var clone = original.DeepClone();
-		var catClone = clone;
+		Cat clone = original.DeepClone();
+		Cat catClone = clone;
 
 		// Assert
 		Assert.IsInstanceOfType<Cat>(clone);
@@ -131,26 +131,26 @@ public class HierarchicalDeepCloneTests
 	public void PolymorphicCollection_DeepClone_ShouldMaintainTypeAndProperties()
 	{
 		// Arrange
-		var original = new AnimalShelter();
+		AnimalShelter original = new();
 		original.Animals.Add(new Dog { Name = "Rex", Age = 5, Breed = "German Shepherd" });
 		original.Animals.Add(new Cat { Name = "Whiskers", Age = 3, IsIndoor = true });
 
 		// Act
-		var clone = original.DeepClone();
+		AnimalShelter clone = original.DeepClone();
 
 		// Assert
 		Assert.AreEqual(2, clone.Animals.Count);
 
 		// Verify first animal is a Dog with correct properties
 		Assert.IsInstanceOfType<Dog>(clone.Animals[0]);
-		var dog = (Dog)clone.Animals[0];
+		Dog dog = (Dog)clone.Animals[0];
 		Assert.AreEqual("Rex", dog.Name);
 		Assert.AreEqual(5, dog.Age);
 		Assert.AreEqual("German Shepherd", dog.Breed);
 
 		// Verify second animal is a Cat with correct properties
 		Assert.IsInstanceOfType<Cat>(clone.Animals[1]);
-		var cat = (Cat)clone.Animals[1];
+		Cat cat = (Cat)clone.Animals[1];
 		Assert.AreEqual("Whiskers", cat.Name);
 		Assert.AreEqual(3, cat.Age);
 		Assert.AreEqual(true, cat.IsIndoor);

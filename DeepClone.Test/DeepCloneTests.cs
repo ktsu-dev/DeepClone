@@ -21,14 +21,14 @@ public class DeepCloneTests
 	public void SimpleObject_DeepClone_ShouldCreateIndependentCopy()
 	{
 		// Arrange
-		var original = new SimpleObject
+		SimpleObject original = new()
 		{
 			Id = 1,
 			Name = "Test"
 		};
 
 		// Act
-		var clone = original.DeepClone();
+		SimpleObject clone = original.DeepClone();
 
 		// Assert
 		Assert.AreEqual(original.Id, clone.Id);
@@ -44,14 +44,14 @@ public class DeepCloneTests
 	}
 
 	/// <summary>
-	/// Tests that a complex object with nested objects can be deep cloned and modifications 
+	/// Tests that a complex object with nested objects can be deep cloned and modifications
 	/// to nested objects in the clone don't affect the original.
 	/// </summary>
 	[TestMethod]
 	public void ComplexObject_DeepClone_ShouldCreateIndependentCopyWithNestedObjects()
 	{
 		// Arrange
-		var original = new ComplexObject
+		ComplexObject original = new()
 		{
 			Id = 1,
 			Name = "Parent",
@@ -68,7 +68,7 @@ public class DeepCloneTests
 		};
 
 		// Act
-		var clone = original.DeepClone();
+		ComplexObject clone = original.DeepClone();
 
 		// Assert
 		Assert.AreEqual(original.Id, clone.Id);
@@ -111,7 +111,7 @@ public class DeepCloneTests
 		};
 
 		// Act
-		var clone = original.DeepClone();
+		Container clone = original.DeepClone();
 
 		// Assert
 		Assert.AreEqual(2, clone.DerivedObjects.Count);
@@ -121,8 +121,8 @@ public class DeepCloneTests
 		Assert.IsInstanceOfType<DerivedObjectB>(clone.DerivedObjects[1]);
 
 		// Verify properties are correctly cloned
-		var clonedA = (DerivedObjectA)clone.DerivedObjects[0];
-		var clonedB = (DerivedObjectB)clone.DerivedObjects[1];
+		DerivedObjectA clonedA = (DerivedObjectA)clone.DerivedObjects[0];
+		DerivedObjectB clonedB = (DerivedObjectB)clone.DerivedObjects[1];
 
 		Assert.AreEqual("SpecialA", clonedA.SpecialPropertyA);
 		Assert.AreEqual(42, clonedB.SpecialPropertyB);
@@ -132,8 +132,8 @@ public class DeepCloneTests
 		clonedB.SpecialPropertyB = 100;
 
 		// Verify originals are unchanged
-		var originalA = (DerivedObjectA)original.DerivedObjects[0];
-		var originalB = (DerivedObjectB)original.DerivedObjects[1];
+		DerivedObjectA originalA = (DerivedObjectA)original.DerivedObjects[0];
+		DerivedObjectB originalB = (DerivedObjectB)original.DerivedObjects[1];
 
 		Assert.AreEqual("SpecialA", originalA.SpecialPropertyA);
 		Assert.AreEqual(42, originalB.SpecialPropertyB);
@@ -165,7 +165,7 @@ public class DeepCloneTests
 		};
 
 		// Act
-		var clone = original.DeepClone();
+		GenericCollectionContainer<SimpleObject> clone = original.DeepClone();
 
 		// Assert
 		Assert.AreEqual(2, clone.Items.Count);
@@ -199,19 +199,21 @@ public class DeepCloneTests
 	public void CircularReference_DeepClone_ShouldCreateIndependentCopy()
 	{
 		// Arrange
-		var original = new NodeObject { Id = 1, Name = "Parent" };
-		var child = new NodeObject { Id = 2, Name = "Child", Parent = original };
+		NodeObject original = new()
+		{ Id = 1, Name = "Parent" };
+		NodeObject child = new()
+		{ Id = 2, Name = "Child", Parent = original };
 		original.Children.Add(child);
 
 		// Act
-		var clone = original.DeepClone();
+		NodeObject clone = original.DeepClone();
 
 		// Assert
 		Assert.AreEqual(1, clone.Id);
 		Assert.AreEqual("Parent", clone.Name);
 		Assert.AreEqual(1, clone.Children.Count);
 
-		var clonedChild = clone.Children[0];
+		NodeObject clonedChild = clone.Children[0];
 		Assert.AreEqual(2, clonedChild.Id);
 		Assert.AreEqual("Child", clonedChild.Name);
 
@@ -250,7 +252,7 @@ public class DeepCloneTests
 		};
 
 		// Act
-		var clone = original.DeepClone();
+		ShapeContainer clone = original.DeepClone();
 
 		// Assert
 		Assert.AreEqual(2, clone.Shapes.Count);
@@ -260,8 +262,8 @@ public class DeepCloneTests
 		Assert.IsInstanceOfType<Rectangle>(clone.Shapes[1]);
 
 		// Verify properties
-		var clonedCircle = (Circle)clone.Shapes[0];
-		var clonedRectangle = (Rectangle)clone.Shapes[1];
+		Circle clonedCircle = (Circle)clone.Shapes[0];
+		Rectangle clonedRectangle = (Rectangle)clone.Shapes[1];
 
 		Assert.AreEqual(5.0, clonedCircle.Radius);
 		Assert.AreEqual(10.0, clonedRectangle.Width);
@@ -272,8 +274,8 @@ public class DeepCloneTests
 		clonedRectangle.Width = 15.0;
 
 		// Verify originals unchanged
-		var originalCircle = (Circle)original.Shapes[0];
-		var originalRectangle = (Rectangle)original.Shapes[1];
+		Circle originalCircle = (Circle)original.Shapes[0];
+		Rectangle originalRectangle = (Rectangle)original.Shapes[1];
 
 		Assert.AreEqual(5.0, originalCircle.Radius);
 		Assert.AreEqual(10.0, originalRectangle.Width);
@@ -290,36 +292,36 @@ public class DeepCloneTests
 	public void ContainerExtensions_DeepClone_ShouldCreateIndependentCopies()
 	{
 		// Arrange
-		var originalList = new List<SimpleObject?>
-		{
+		List<SimpleObject?> originalList =
+		[
 			new() { Id = 1, Name = "Item1" },
 			new() { Id = 2, Name = "Item2" }
-		};
+		];
 
-		var originalDict = new Dictionary<string, SimpleObject?>
+		Dictionary<string, SimpleObject?> originalDict = new()
 		{
 			["key1"] = new() { Id = 3, Name = "Dict1" },
 			["key2"] = new() { Id = 4, Name = "Dict2" }
 		};
 
-		var originalSet = new HashSet<SimpleObject?>
-		{
+		HashSet<SimpleObject?> originalSet =
+		[
 			new() { Id = 5, Name = "Set1" },
 			new() { Id = 6, Name = "Set2" }
-		};
+		];
 
-		var originalStack = new Stack<SimpleObject?>();
+		Stack<SimpleObject?> originalStack = new();
 		originalStack.Push(new() { Id = 7, Name = "Stack1" });
 		originalStack.Push(new() { Id = 8, Name = "Stack2" });
 
 		// Act
 		// Use IEnumerable for list to avoid ambiguity
-		var clonedList = originalList.DeepClone()?.ToList();
+		List<SimpleObject?>? clonedList = originalList.DeepClone()?.ToList();
 		// Cast to IDictionary to resolve ambiguity
-		var clonedDict = ((IDictionary<string, SimpleObject?>)originalDict).DeepClone();
+		IDictionary<string, SimpleObject?> clonedDict = ((IDictionary<string, SimpleObject?>)originalDict).DeepClone();
 		// Use nullable types for HashSet and Stack
-		var clonedSet = originalSet.DeepClone();
-		var clonedStack = originalStack.DeepClone();
+		HashSet<SimpleObject?> clonedSet = originalSet.DeepClone();
+		Stack<SimpleObject?> clonedStack = originalStack.DeepClone();
 
 		// Assert - List
 		Assert.IsNotNull(clonedList);
@@ -362,7 +364,7 @@ public class DeepCloneTests
 		Assert.AreEqual(2, clonedSet!.Count);
 
 		// Check set elements by converting to list and sorting by ID to ensure consistent order
-		var setItems = clonedSet.Where(item => item != null).OrderBy(item => item!.Id).ToList();
+		List<SimpleObject?> setItems = [.. clonedSet.Where(item => item != null).OrderBy(item => item!.Id)];
 		Assert.AreEqual(5, setItems[0]!.Id);
 		Assert.AreEqual("Set1", setItems[0]!.Name);
 		Assert.AreEqual(6, setItems[1]!.Id);
@@ -372,12 +374,12 @@ public class DeepCloneTests
 		Assert.IsNotNull(clonedStack);
 		Assert.AreEqual(2, clonedStack!.Count);
 
-		var firstPopped = clonedStack.Pop();
+		SimpleObject? firstPopped = clonedStack.Pop();
 		Assert.IsNotNull(firstPopped);
 		Assert.AreEqual(8, firstPopped!.Id);
 		Assert.AreEqual("Stack2", firstPopped!.Name);
 
-		var secondPopped = clonedStack.Pop();
+		SimpleObject? secondPopped = clonedStack.Pop();
 		Assert.IsNotNull(secondPopped);
 		Assert.AreEqual(7, secondPopped!.Id);
 		Assert.AreEqual("Stack1", secondPopped!.Name);
@@ -390,10 +392,11 @@ public class DeepCloneTests
 	public void IDeepCloneable_NonGeneric_ShouldCreateIndependentCopy()
 	{
 		// Arrange
-		var original = new SimpleObject { Id = 1, Name = "TestObject" };
+		SimpleObject original = new()
+		{ Id = 1, Name = "TestObject" };
 
 		// Act - Cast to IDeepCloneable and call DeepClone
-		var clone = (SimpleObject)((IDeepCloneable)original).DeepClone();
+		SimpleObject clone = (SimpleObject)((IDeepCloneable)original).DeepClone();
 
 		// Assert
 		Assert.AreEqual(1, clone.Id);
@@ -413,7 +416,7 @@ public class DeepCloneTests
 	public void NullReferences_DeepClone_ShouldHandleCorrectly()
 	{
 		// Arrange
-		var original = new ComplexObject
+		ComplexObject original = new()
 		{
 			Id = 1,
 			Name = "Parent",
@@ -422,7 +425,7 @@ public class DeepCloneTests
 		};
 
 		// Act
-		var clone = original.DeepClone();
+		ComplexObject clone = original.DeepClone();
 
 		// Assert
 		Assert.AreEqual(original.Id, clone.Id);
@@ -439,11 +442,11 @@ public class DeepCloneTests
 	public void EmptyCollections_DeepClone_ShouldCreateIndependentEmptyCollections()
 	{
 		// Arrange
-		var original = new Container();
+		Container original = new();
 		// Intentionally leave collections empty
 
 		// Act
-		var clone = original.DeepClone();
+		Container clone = original.DeepClone();
 
 		// Assert
 		Assert.IsNotNull(clone.DerivedObjects);
@@ -464,19 +467,21 @@ public class DeepCloneTests
 	public void LargeObjectHierarchy_DeepClone_ShouldNotStackOverflow()
 	{
 		// Arrange - Create a deep object hierarchy
-		var root = new NodeObject { Id = 1, Name = "Root" };
-		var current = root;
+		NodeObject root = new()
+		{ Id = 1, Name = "Root" };
+		NodeObject current = root;
 
 		// Create a chain of 100 nodes (deep hierarchy)
-		for (var i = 2; i <= 100; i++)
+		for (int i = 2; i <= 100; i++)
 		{
-			var next = new NodeObject { Id = i, Name = $"Node{i}", Parent = current };
+			NodeObject next = new()
+			{ Id = i, Name = $"Node{i}", Parent = current };
 			current.Children.Add(next);
 			current = next;
 		}
 
 		// Act - Should complete without stack overflow
-		var clone = root.DeepClone();
+		NodeObject clone = root.DeepClone();
 
 		// Assert - Verify depth of hierarchy is maintained
 		Assert.AreEqual(1, clone.Id);
@@ -484,7 +489,7 @@ public class DeepCloneTests
 
 		// Navigate to the deepest node
 		current = clone;
-		for (var i = 2; i <= 100; i++)
+		for (int i = 2; i <= 100; i++)
 		{
 			Assert.AreEqual(1, current.Children.Count, $"Node at level {i - 1} should have one child");
 			current = current.Children[0];
@@ -522,14 +527,14 @@ public class SimpleObject : DeepCloneable<SimpleObject>
 	/// <remarks>
 	/// If this class were to be used as a base class, derived classes should call base.DeepClone(clone)
 	/// at the beginning of their DeepClone method to ensure all base class properties are cloned properly.
-	/// 
+	///
 	/// Example for a derived class:
 	/// <code>
 	/// protected override void DeepClone(DerivedObject clone)
 	/// {
 	///     // Always call base.DeepClone first to handle base class properties
 	///     base.DeepClone(clone);
-	///     
+	///
 	///     // Then clone derived class properties
 	///     clone.DerivedProperty = DerivedProperty?.DeepClone();
 	/// }
@@ -580,18 +585,18 @@ public class ComplexObject : DeepCloneable<ComplexObject>
 	/// 1. Always call base.DeepClone(clone) first in derived classes
 	/// 2. This ensures the base class properties are properly cloned before handling derived class properties
 	/// 3. The chain of base.DeepClone calls is crucial for maintaining the integrity of the object graph
-	/// 
+	///
 	/// For example, if ComplexObject were extended:
 	/// <code>
 	/// public class MoreComplexObject : ComplexObject
 	/// {
 	///     public AdditionalData? ExtraInfo { get; set; }
-	///     
+	///
 	///     protected override void DeepClone(MoreComplexObject clone)
 	///     {
 	///         // First call base to handle ComplexObject properties
 	///         base.DeepClone(clone);
-	///         
+	///
 	///         // Then handle MoreComplexObject properties
 	///         clone.ExtraInfo = ExtraInfo?.DeepClone();
 	///     }
@@ -605,7 +610,7 @@ public class ComplexObject : DeepCloneable<ComplexObject>
 		clone.Name = Name;
 		clone.Child = Child?.DeepClone();
 
-		foreach (var item in Items)
+		foreach (SimpleObject item in Items)
 		{
 			clone.Items.Add(item.DeepClone());
 		}
