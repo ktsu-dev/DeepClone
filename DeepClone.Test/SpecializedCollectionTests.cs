@@ -232,8 +232,8 @@ public class SpecializedCollectionTests
 
 		// Verify adding to clone doesn't affect original
 		clone.Add(3, new SimpleObject { Id = 3, Name = "Item3" });
-		Assert.AreEqual(3, clone.Count);
-		Assert.AreEqual(2, original.Count);
+		Assert.HasCount(3, clone);
+		Assert.HasCount(2, original);
 		Assert.IsFalse(original.ContainsKey(3));
 	}
 }

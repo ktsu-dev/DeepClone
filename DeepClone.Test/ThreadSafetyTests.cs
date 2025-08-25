@@ -83,7 +83,7 @@ public class ThreadSafetyTests
 		});
 
 		// Assert - verify all clones are independent copies
-		Assert.AreEqual(100, results.Count);
+		Assert.HasCount(100, results);
 
 		foreach (ComplexObject clone in results)
 		{
@@ -133,7 +133,7 @@ public class ThreadSafetyTests
 			.ToConcurrentDictionary();
 
 		// Assert
-		Assert.AreEqual(10, clone.Count);
+		Assert.HasCount(10, clone);
 
 		// Check all items were cloned correctly
 		for (int i = 0; i < 10; i++)

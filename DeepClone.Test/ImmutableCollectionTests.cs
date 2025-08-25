@@ -48,7 +48,6 @@ public class ImmutableCollectionTests
 		ImmutableArray<SimpleObject> clone = [.. cloneEnumerable];
 
 		// Assert
-		Assert.IsNotNull(clone);
 		Assert.AreEqual(original.Length, clone.Length);
 
 		// Check values were copied correctly

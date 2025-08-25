@@ -2,6 +2,18 @@
 <!-- https://learn.microsoft.com/dotnet/fundamentals/package-validation/diagnostic-ids -->
 <Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:System.Runtime.CompilerServices.RequiresLocationAttribute</Target>
+    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:System.Runtime.CompilerServices.IsExternalInit</Target>
+    <Left>lib/netstandard2.1/ktsu.DeepClone.dll</Left>
+    <Right>lib/net5.0/ktsu.DeepClone.dll</Right>
+  </Suppression>
+  <Suppression>
     <DiagnosticId>CP0016</DiagnosticId>
     <Target>M:ktsu.DeepClone.DeepCloneContainerExtensions.DeepClone``1(System.Collections.Generic.HashSet{``0})&lt;0&gt;:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
     <Left>lib/net7.0/ktsu.DeepClone.dll</Left>

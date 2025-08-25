@@ -114,7 +114,7 @@ public class DeepCloneTests
 		Container clone = original.DeepClone();
 
 		// Assert
-		Assert.AreEqual(2, clone.DerivedObjects.Count);
+		Assert.HasCount(2, clone.DerivedObjects);
 
 		// Verify correct polymorphic types are preserved
 		Assert.IsInstanceOfType<DerivedObjectA>(clone.DerivedObjects[0]);
@@ -168,8 +168,8 @@ public class DeepCloneTests
 		GenericCollectionContainer<SimpleObject> clone = original.DeepClone();
 
 		// Assert
-		Assert.AreEqual(2, clone.Items.Count);
-		Assert.AreEqual(2, clone.ItemsMapping.Count);
+		Assert.HasCount(2, clone.Items);
+		Assert.HasCount(2, clone.ItemsMapping);
 
 		// Verify list items are cloned
 		Assert.AreEqual(1, clone.Items[0].Id);
@@ -211,7 +211,7 @@ public class DeepCloneTests
 		// Assert
 		Assert.AreEqual(1, clone.Id);
 		Assert.AreEqual("Parent", clone.Name);
-		Assert.AreEqual(1, clone.Children.Count);
+		Assert.HasCount(1, clone.Children);
 
 		NodeObject clonedChild = clone.Children[0];
 		Assert.AreEqual(2, clonedChild.Id);
@@ -255,7 +255,7 @@ public class DeepCloneTests
 		ShapeContainer clone = original.DeepClone();
 
 		// Assert
-		Assert.AreEqual(2, clone.Shapes.Count);
+		Assert.HasCount(2, clone.Shapes);
 
 		// Verify correct derived types
 		Assert.IsInstanceOfType<Circle>(clone.Shapes[0]);
@@ -325,7 +325,7 @@ public class DeepCloneTests
 
 		// Assert - List
 		Assert.IsNotNull(clonedList);
-		Assert.AreEqual(2, clonedList!.Count);
+		Assert.HasCount(2, clonedList);
 		Assert.IsNotNull(clonedList[0]);
 		Assert.AreEqual(1, clonedList[0]!.Id);
 		Assert.AreEqual("Item1", clonedList[0]!.Name);
@@ -343,7 +343,7 @@ public class DeepCloneTests
 
 		// Assert - Dictionary
 		Assert.IsNotNull(clonedDict);
-		Assert.AreEqual(2, clonedDict!.Count);
+		Assert.HasCount(2, clonedDict);
 		Assert.IsNotNull(clonedDict["key1"]);
 		Assert.AreEqual(3, clonedDict["key1"]!.Id);
 		Assert.AreEqual("Dict1", clonedDict["key1"]!.Name);
@@ -361,7 +361,7 @@ public class DeepCloneTests
 
 		// Assert - HashSet
 		Assert.IsNotNull(clonedSet);
-		Assert.AreEqual(2, clonedSet!.Count);
+		Assert.HasCount(2, clonedSet);
 
 		// Check set elements by converting to list and sorting by ID to ensure consistent order
 		List<SimpleObject?> setItems = [.. clonedSet.Where(item => item != null).OrderBy(item => item!.Id)];
@@ -372,7 +372,7 @@ public class DeepCloneTests
 
 		// Assert - Stack (should maintain LIFO order)
 		Assert.IsNotNull(clonedStack);
-		Assert.AreEqual(2, clonedStack!.Count);
+		Assert.HasCount(2, clonedStack);
 
 		SimpleObject? firstPopped = clonedStack.Pop();
 		Assert.IsNotNull(firstPopped);
@@ -432,7 +432,7 @@ public class DeepCloneTests
 		Assert.AreEqual(original.Name, clone.Name);
 		Assert.IsNull(clone.Child, "Null references should remain null after cloning");
 		Assert.IsNotNull(clone.Items, "Empty collections should be initialized, not null");
-		Assert.AreEqual(0, clone.Items.Count, "Empty collections should remain empty after cloning");
+		Assert.IsEmpty(clone.Items, "Empty collections should remain empty after cloning");
 	}
 
 	/// <summary>
@@ -450,14 +450,14 @@ public class DeepCloneTests
 
 		// Assert
 		Assert.IsNotNull(clone.DerivedObjects);
-		Assert.AreEqual(0, clone.DerivedObjects.Count);
+		Assert.IsEmpty(clone.DerivedObjects);
 
 		// Add to clone's collection
 		clone.DerivedObjects.Add(new DerivedObjectA { Id = 1, Name = "A" });
 
 		// Original should still be empty
-		Assert.AreEqual(0, original.DerivedObjects.Count);
-		Assert.AreEqual(1, clone.DerivedObjects.Count);
+		Assert.IsEmpty(original.DerivedObjects);
+		Assert.HasCount(1, clone.DerivedObjects);
 	}
 
 	/// <summary>
@@ -491,14 +491,14 @@ public class DeepCloneTests
 		current = clone;
 		for (int i = 2; i <= 100; i++)
 		{
-			Assert.AreEqual(1, current.Children.Count, $"Node at level {i - 1} should have one child");
+			Assert.HasCount(1, current.Children, $"Node at level {i - 1} should have one child");
 			current = current.Children[0];
 			Assert.AreEqual(i, current.Id, $"Node at level {i} should have ID {i}");
 			Assert.AreEqual($"Node{i}", current.Name, $"Node at level {i} should have name Node{i}");
 		}
 
 		// Verify we reached the leaf node
-		Assert.AreEqual(0, current.Children.Count, "Leaf node should have no children");
+		Assert.IsEmpty(current.Children, "Leaf node should have no children");
 	}
 }
 
