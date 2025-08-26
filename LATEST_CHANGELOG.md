@@ -1,5 +1,3 @@
-## v2.0.4 (patch)
+## v2.0.4
 
-Changes since v2.0.3:
-
-- Migrate to PolySharp polyfills ([@matt-edmondson](https://github.com/matt-edmondson))
+No significant changes detected since v2.0.4.
