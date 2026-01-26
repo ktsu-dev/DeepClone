@@ -1,9 +1,6 @@
-## v2.0.6-pre.4 (prerelease)
+## v2.0.6 (patch)
 
-Changes since v2.0.6-pre.3:
+Changes since v2.0.5:
 
-- Sync .github\workflows\update-sdks.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .gitignore ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Update project files and tests for improved functionality and dependencies ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add CLAUDE.md for project guidance and documentation ([@matt-edmondson](https://github.com/matt-edmondson))
