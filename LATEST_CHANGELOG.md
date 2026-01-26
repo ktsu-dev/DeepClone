@@ -1,6 +1,6 @@
-## v2.0.6 (patch)
+## v2.0.7-pre.1 (prerelease)
 
-Changes since v2.0.5:
+Changes since v2.0.6:
 
-- Update project files and tests for improved functionality and dependencies ([@matt-edmondson](https://github.com/matt-edmondson))
-- Add CLAUDE.md for project guidance and documentation ([@matt-edmondson](https://github.com/matt-edmondson))
+- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
