@@ -97,10 +97,7 @@ public class ThreadSafetyTests
 			// Modifying each clone shouldn't affect the original
 			clone.Id = 999;
 			clone.Name = "Modified";
-			if (clone.Child != null)
-			{
-				clone.Child.Name = "ModifiedChild";
-			}
+			clone.Child!.Name = "ModifiedChild";
 		}
 
 		// Verify original remains unchanged

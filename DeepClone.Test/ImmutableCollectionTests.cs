@@ -48,7 +48,7 @@ public class ImmutableCollectionTests
 		ImmutableArray<SimpleObject> clone = [.. cloneEnumerable];
 
 		// Assert
-		Assert.AreEqual(original.Length, clone.Length);
+		Assert.HasCount(original.Length, clone);
 
 		// Check values were copied correctly
 		Assert.AreEqual(1, clone[0].Id);
@@ -87,7 +87,7 @@ public class ImmutableCollectionTests
 
 		// Assert
 		Assert.IsNotNull(clone);
-		Assert.AreEqual(original.Count, clone.Count);
+		Assert.HasCount(original.Count, clone);
 
 		// Check values were copied correctly
 		Assert.AreEqual(1, clone[0].Id);
@@ -131,7 +131,7 @@ public class ImmutableCollectionTests
 
 		// Assert
 		Assert.IsNotNull(clone);
-		Assert.AreEqual(original.Count, clone.Count);
+		Assert.HasCount(original.Count, clone);
 
 		// Check values were copied correctly
 		Assert.AreEqual(1, clone[1].Id);
@@ -170,7 +170,7 @@ public class ImmutableCollectionTests
 
 		// Assert
 		Assert.IsNotNull(clone);
-		Assert.AreEqual(original.Count, clone.Count);
+		Assert.HasCount(original.Count, clone);
 
 		// Find the items in the clone by ID
 		SimpleObject item1Clone = clone.First(item => item.Id == 1);
@@ -220,7 +220,7 @@ public class ImmutableCollectionTests
 
 		// Assert
 		Assert.IsNotNull(clone);
-		Assert.AreEqual(original.Count, clone.Count);
+		Assert.HasCount(original.Count, clone);
 
 		// Check ordering
 		int[] originalKeys = [.. original.Keys];
@@ -269,7 +269,7 @@ public class ImmutableCollectionTests
 
 		// Assert
 		Assert.IsNotNull(clone);
-		Assert.AreEqual(original.Count, clone.Count);
+		Assert.HasCount(original.Count, clone);
 
 		// Check ordering (should be sorted by ID)
 		SimpleObject[] originalArray = [.. original];

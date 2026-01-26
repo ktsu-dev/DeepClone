@@ -2,6 +2,8 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
+[assembly: Parallelize(Scope = ExecutionScope.MethodLevel)]
+
 namespace ktsu.DeepClone.Test;
 
 using System.Collections.ObjectModel;
@@ -77,15 +79,12 @@ public class DeepCloneTests
 		Assert.IsNotNull(clone.Child);
 		Assert.AreEqual(original.Child!.Id, clone.Child!.Id);
 		Assert.AreEqual(original.Child.Name, clone.Child.Name);
-		Assert.AreEqual(original.Items.Count, clone.Items.Count);
+		Assert.HasCount(original.Items.Count, clone.Items);
 		Assert.AreEqual(original.Items[0].Id, clone.Items[0].Id);
 		Assert.AreEqual(original.Items[1].Name, clone.Items[1].Name);
 
 		// Modify clone's nested objects
-		if (clone.Child != null)
-		{
-			clone.Child.Id = 99;
-		}
+		clone.Child!.Id = 99;
 
 		clone.Items[0].Name = "Modified";
 

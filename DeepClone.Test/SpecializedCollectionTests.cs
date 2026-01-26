@@ -30,7 +30,7 @@ public class SpecializedCollectionTests
 
 		// Assert
 		Assert.IsNotNull(clone);
-		Assert.AreEqual(original.Count, clone.Count);
+		Assert.HasCount(original.Count, clone);
 
 		SimpleObject originalItem = original.First(item => item.Id == 1);
 		SimpleObject cloneItem = clone.First(item => item.Id == 1);
@@ -60,7 +60,7 @@ public class SpecializedCollectionTests
 
 		// Assert
 		Assert.IsNotNull(clone);
-		Assert.AreEqual(original.Count, clone.Count);
+		Assert.HasCount(original.Count, clone);
 
 		// First item should be the one with smallest ID
 		SimpleObject originalFirst = original.First();
@@ -108,7 +108,7 @@ public class SpecializedCollectionTests
 
 		// Assert
 		Assert.IsNotNull(clone);
-		Assert.AreEqual(original.Count, clone.Count);
+		Assert.HasCount(original.Count, clone);
 
 		// The top of the new stack will be the last item pushed, which was the bottom item (Id=1)
 		Assert.AreEqual(2, original.Peek().Id, "Top of original stack is Id=2");
@@ -146,8 +146,8 @@ public class SpecializedCollectionTests
 
 		// Assert
 		Assert.IsNotNull(clone);
-		Assert.AreEqual(original.Count, clone.Count);
-		Assert.AreEqual(originalArray.Length, cloneArray.Length);
+		Assert.HasCount(original.Count, clone);
+		Assert.HasCount(originalArray.Length, cloneArray);
 
 		// Verify order preserved
 		Assert.AreEqual(1, originalArray[0].Id);
@@ -180,7 +180,7 @@ public class SpecializedCollectionTests
 
 		// Assert
 		Assert.IsNotNull(clone);
-		Assert.AreEqual(original.Count, clone.Count);
+		Assert.HasCount(original.Count, clone);
 
 		LinkedListNode<SimpleObject>? originalFirst = original.First;
 		LinkedListNode<SimpleObject>? cloneFirst = clone.First;
@@ -213,7 +213,7 @@ public class SpecializedCollectionTests
 
 		// Assert
 		Assert.IsNotNull(clone);
-		Assert.AreEqual(original.Count, clone.Count);
+		Assert.HasCount(original.Count, clone);
 
 		// Verify keys are present
 		Assert.IsTrue(clone.ContainsKey(1));
