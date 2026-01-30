@@ -1,5 +1,3 @@
-## v2.0.8 (patch)
+## v2.0.8
 
-Changes since v2.0.7:
-
-- Enhance assertions in tests with descriptive messages for clarity ([@matt-edmondson](https://github.com/matt-edmondson))
+No significant changes detected since v2.0.8.
