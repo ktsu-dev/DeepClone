@@ -1,5 +1,5 @@
-## v2.0.7 (patch)
+## v2.0.8 (patch)
 
-Changes since v2.0.6:
+Changes since v2.0.7:
 
-- Remove .github\workflows\project.yml ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance assertions in tests with descriptive messages for clarity ([@matt-edmondson](https://github.com/matt-edmondson))
