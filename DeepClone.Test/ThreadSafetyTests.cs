@@ -135,7 +135,7 @@ public class ThreadSafetyTests
 		// Check all items were cloned correctly
 		for (int i = 0; i < 10; i++)
 		{
-			Assert.IsTrue(clone.ContainsKey(i));
+			Assert.IsTrue(clone.ContainsKey(i), $"Clone should contain key {i}");
 			Assert.AreEqual(i, clone[i].Id);
 			Assert.AreEqual($"Item{i}", clone[i].Name);
 		}

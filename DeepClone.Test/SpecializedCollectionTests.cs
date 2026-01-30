@@ -216,8 +216,8 @@ public class SpecializedCollectionTests
 		Assert.HasCount(original.Count, clone);
 
 		// Verify keys are present
-		Assert.IsTrue(clone.ContainsKey(1));
-		Assert.IsTrue(clone.ContainsKey(2));
+		Assert.IsTrue(clone.ContainsKey(1), "Clone should contain key 1");
+		Assert.IsTrue(clone.ContainsKey(2), "Clone should contain key 2");
 
 		// Verify values match
 		Assert.AreEqual(1, clone[1].Id);
@@ -234,7 +234,7 @@ public class SpecializedCollectionTests
 		clone.Add(3, new SimpleObject { Id = 3, Name = "Item3" });
 		Assert.HasCount(3, clone);
 		Assert.HasCount(2, original);
-		Assert.IsFalse(original.ContainsKey(3));
+		Assert.IsFalse(original.ContainsKey(3), "Original should not contain key 3 added to clone");
 	}
 }
 

@@ -46,7 +46,7 @@ public class HierarchicalDeepCloneTests
 
 		// Verify Dog-specific properties
 		Assert.AreEqual("German Shepherd", dogClone.Breed);
-		Assert.IsTrue(dogClone.IsTrained);
+		Assert.IsTrue(dogClone.IsTrained, "Cloned dog should be trained");
 	}
 
 	/// <summary>
@@ -84,7 +84,7 @@ public class HierarchicalDeepCloneTests
 		Assert.AreEqual(4, original.NumberOfLegs);
 		Assert.AreEqual("Brown", original.FurColor);
 		Assert.AreEqual("German Shepherd", original.Breed);
-		Assert.IsTrue(original.IsTrained);
+		Assert.IsTrue(original.IsTrained, "Original dog should remain trained after clone modification");
 	}
 
 	/// <summary>
@@ -120,7 +120,7 @@ public class HierarchicalDeepCloneTests
 		Assert.AreEqual("Orange", catClone.FurColor);
 
 		// Verify Cat-specific properties
-		Assert.IsTrue(catClone.IsIndoor);
+		Assert.IsTrue(catClone.IsIndoor, "Cloned cat should be indoor");
 		Assert.AreEqual("Ball of Yarn", catClone.FavoriteToy);
 	}
 
@@ -153,7 +153,7 @@ public class HierarchicalDeepCloneTests
 		Cat cat = (Cat)clone.Animals[1];
 		Assert.AreEqual("Whiskers", cat.Name);
 		Assert.AreEqual(3, cat.Age);
-		Assert.IsTrue(cat.IsIndoor);
+		Assert.IsTrue(cat.IsIndoor, "Cloned cat from polymorphic collection should be indoor");
 
 		// Modify the clone and ensure originals aren't affected
 		dog.Name = "Modified";
