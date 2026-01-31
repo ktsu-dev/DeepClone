@@ -37,15 +37,9 @@ public static class DeepCloneContainerExtensions
 	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
 	public static void DeepCloneFrom<T>(this ICollection<T> dest, IEnumerable<T> source)
 	{
-		if (dest is null)
-		{
-			throw new ArgumentNullException(nameof(dest), "Destination collection cannot be null.");
-		}
+		Ensure.NotNull(dest);
 
-		if (source is null)
-		{
-			throw new ArgumentNullException(nameof(source), "Source collection cannot be null.");
-		}
+		Ensure.NotNull(source);
 
 		dest.Clear();
 		foreach (T? item in source)
@@ -78,15 +72,9 @@ public static class DeepCloneContainerExtensions
 	public static void DeepCloneFrom<TKey, TValue>(this IDictionary<TKey, TValue> dest, IDictionary<TKey, TValue> source)
 		where TKey : notnull
 	{
-		if (dest is null)
-		{
-			throw new ArgumentNullException(nameof(dest), "Destination dictionary cannot be null.");
-		}
+		Ensure.NotNull(dest);
 
-		if (source is null)
-		{
-			throw new ArgumentNullException(nameof(source), "Source dictionary cannot be null.");
-		}
+		Ensure.NotNull(source);
 
 		dest.Clear();
 		foreach (KeyValuePair<TKey, TValue> pair in source)
@@ -149,10 +137,7 @@ public static class DeepCloneContainerExtensions
 	public static IDictionary<TKey, TValue> DeepClone<TKey, TValue>(this IDictionary<TKey, TValue> source)
 		where TKey : notnull
 	{
-		if (source is null)
-		{
-			throw new ArgumentNullException(nameof(source), "Source dictionary cannot be null.");
-		}
+		Ensure.NotNull(source);
 
 		return source.ToDictionary(
 			pair => DeepClone(pair.Key),
@@ -197,10 +182,7 @@ public static class DeepCloneContainerExtensions
 	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
 	public static HashSet<T> DeepClone<T>(this HashSet<T> source)
 	{
-		if (source is null)
-		{
-			throw new ArgumentNullException(nameof(source), "Source dictionary cannot be null.");
-		}
+		Ensure.NotNull(source);
 
 		return new(source.Select(DeepClone), source.Comparer);
 	}
@@ -223,10 +205,7 @@ public static class DeepCloneContainerExtensions
 	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
 	public static SortedSet<T> DeepClone<T>(this SortedSet<T> source)
 	{
-		if (source is null)
-		{
-			throw new ArgumentNullException(nameof(source), "Source dictionary cannot be null.");
-		}
+		Ensure.NotNull(source);
 
 		return new(source.Select(DeepClone), source.Comparer);
 	}
