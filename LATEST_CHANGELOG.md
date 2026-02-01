@@ -1,3 +1,6 @@
-## v2.0.9-pre.1 (prerelease)
+## v2.0.9-pre.2 (prerelease)
 
-Incremental prerelease update.
+Changes since v2.0.9-pre.1:
+
+- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
