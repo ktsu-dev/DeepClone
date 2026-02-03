@@ -1,6 +1,6 @@
-## v2.0.9-pre.2 (prerelease)
+## v2.0.9-pre.3 (prerelease)
 
-Changes since v2.0.9-pre.1:
+Changes since v2.0.9-pre.2:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
 - Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
