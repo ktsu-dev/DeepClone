@@ -1,3 +1,9 @@
+## v2.0.10 (patch)
+
+Changes since v2.0.9:
+
+- Remove legacy build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v2.0.9 (patch)
 
 Changes since v2.0.8:
@@ -37,9 +43,7 @@ Changes since v2.0.9-pre.1:
 
 ## v2.0.9-pre.1 (prerelease)
 
-Changes since v2.0.8:
-
-- Refactor null checks in DeepCloneContainerExtensions and update Polyfill package version to 9.7.7 ([@matt-edmondson](https://github.com/matt-edmondson))
+No significant changes detected since v2.0.9.
 
 ## v2.0.8 (patch)
 
