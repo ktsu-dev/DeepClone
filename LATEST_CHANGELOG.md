@@ -1,6 +1,4 @@
-## v2.0.10 (patch)
+## v2.0.10
 
-Changes since v2.0.9:
-
-- Remove legacy build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
+No significant changes detected since v2.0.10.
 
