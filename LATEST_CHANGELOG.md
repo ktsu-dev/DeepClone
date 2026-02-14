@@ -1,6 +1,6 @@
-## v2.0.9-pre.5 (prerelease)
+## v2.0.9 (patch)
 
-Changes since v2.0.9-pre.4:
+Changes since v2.0.8:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Refactor null checks in DeepCloneContainerExtensions and update Polyfill package version to 9.7.7 ([@matt-edmondson](https://github.com/matt-edmondson))
+
