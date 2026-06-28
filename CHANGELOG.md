@@ -1,3 +1,11 @@
+## v2.0.13 (patch)
+
+Changes since v2.0.12:
+
+- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+
 ## v2.0.12 (patch)
 
 Changes since v2.0.11:
@@ -7,9 +15,7 @@ Changes since v2.0.11:
 
 ## v2.0.12-pre.1 (prerelease)
 
-Changes since v2.0.11:
-
-- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
+No significant changes detected since v2.0.12.
 
 ## v2.0.11 (patch)
 
