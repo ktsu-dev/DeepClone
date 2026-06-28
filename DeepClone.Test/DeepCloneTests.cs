@@ -77,19 +77,19 @@ public class DeepCloneTests
 		Assert.AreEqual(original.Name, clone.Name);
 		Assert.IsNotNull(original.Child);
 		Assert.IsNotNull(clone.Child);
-		Assert.AreEqual(original.Child!.Id, clone.Child!.Id);
+		Assert.AreEqual(original.Child.Id, clone.Child.Id);
 		Assert.AreEqual(original.Child.Name, clone.Child.Name);
 		Assert.HasCount(original.Items.Count, clone.Items);
 		Assert.AreEqual(original.Items[0].Id, clone.Items[0].Id);
 		Assert.AreEqual(original.Items[1].Name, clone.Items[1].Name);
 
 		// Modify clone's nested objects
-		clone.Child!.Id = 99;
+		clone.Child.Id = 99;
 
 		clone.Items[0].Name = "Modified";
 
 		// Original's nested objects should remain unchanged
-		Assert.AreEqual(2, original.Child!.Id);
+		Assert.AreEqual(2, original.Child.Id);
 		Assert.AreEqual("Item1", original.Items[0].Name);
 	}
 

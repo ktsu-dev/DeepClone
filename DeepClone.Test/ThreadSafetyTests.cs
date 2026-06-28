@@ -91,20 +91,20 @@ public class ThreadSafetyTests
 			Assert.AreEqual(1, clone.Id);
 			Assert.AreEqual("Parent", clone.Name);
 			Assert.IsNotNull(clone.Child);
-			Assert.AreEqual(2, clone.Child!.Id);
+			Assert.AreEqual(2, clone.Child.Id);
 			Assert.AreEqual("Child", clone.Child.Name);
 
 			// Modifying each clone shouldn't affect the original
 			clone.Id = 999;
 			clone.Name = "Modified";
-			clone.Child!.Name = "ModifiedChild";
+			clone.Child.Name = "ModifiedChild";
 		}
 
 		// Verify original remains unchanged
 		Assert.AreEqual(1, original.Id);
 		Assert.AreEqual("Parent", original.Name);
 		Assert.IsNotNull(original.Child);
-		Assert.AreEqual(2, original.Child!.Id);
+		Assert.AreEqual(2, original.Child.Id);
 		Assert.AreEqual("Child", original.Child.Name);
 	}
 
