@@ -1,7 +1,6 @@
-## v2.0.22 (patch)
+## v2.0.23 (patch)
 
-Changes since v2.0.21:
+Changes since v2.0.22:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Bump Polyfill from 11.0.1 to 11.0.2 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
