@@ -1,3 +1,7 @@
+## v2.0.24
+
+No significant changes detected since v2.0.24.
+
 ## v2.0.24 (patch)
 
 Changes since v2.0.23:
