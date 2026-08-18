@@ -1,4 +1,6 @@
-## v2.0.24
+## v2.0.25 (patch)
 
-No significant changes detected since v2.0.24.
+Changes since v2.0.24:
+
+- Stop Update SDKs failing when there is nothing to update ([@matt-edmondson](https://github.com/matt-edmondson))
 
