@@ -2,11 +2,13 @@
 
 > A lightweight .NET library providing a simple, generic interface for implementing deep cloning functionality in your classes.
 
-[![License](https://img.shields.io/github/license/ktsu-dev/DeepClone)](https://github.com/ktsu-dev/DeepClone/blob/main/LICENSE.md)
-[![NuGet](https://img.shields.io/nuget/v/ktsu.DeepClone.svg)](https://www.nuget.org/packages/ktsu.DeepClone/)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.DeepClone.svg)](https://www.nuget.org/packages/ktsu.DeepClone/)
-[![Build Status](https://github.com/ktsu-dev/DeepClone/workflows/build/badge.svg)](https://github.com/ktsu-dev/DeepClone/actions)
-[![GitHub Stars](https://img.shields.io/github/stars/ktsu-dev/DeepClone?style=social)](https://github.com/ktsu-dev/DeepClone/stargazers)
+[![License](https://img.shields.io/github/license/ktsu-dev/DeepClone.svg?label=License&logo=nuget)](LICENSE.md)
+[![NuGet Version](https://img.shields.io/nuget/v/ktsu.DeepClone?label=Stable&logo=nuget)](https://nuget.org/packages/ktsu.DeepClone)
+[![NuGet Version](https://img.shields.io/nuget/vpre/ktsu.DeepClone?label=Latest&logo=nuget)](https://nuget.org/packages/ktsu.DeepClone)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.DeepClone?label=Downloads&logo=nuget)](https://nuget.org/packages/ktsu.DeepClone)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ktsu-dev/DeepClone?label=Commits&logo=github)](https://github.com/ktsu-dev/DeepClone/commits/main)
+[![GitHub contributors](https://img.shields.io/github/contributors/ktsu-dev/DeepClone?label=Contributors&logo=github)](https://github.com/ktsu-dev/DeepClone/graphs/contributors)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ktsu-dev/DeepClone/dotnet.yml?label=Build&logo=github)](https://github.com/ktsu-dev/DeepClone/actions)
 
 ## Introduction
 
