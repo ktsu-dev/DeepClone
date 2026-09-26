@@ -160,9 +160,16 @@ public static class DeepCloneContainerExtensions
 	/// var clonedReadOnlyDict = originalReadOnlyDict.DeepClone();
 	/// </code>
 	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
 	public static IReadOnlyDictionary<TKey, TValue> DeepClone<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> source)
-		where TKey : notnull =>
-		(IReadOnlyDictionary<TKey, TValue>)source.ToDictionary(DeepClone, DeepClone);
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		return source.ToDictionary(
+			pair => DeepClone(pair.Key),
+			pair => DeepClone(pair.Value));
+	}
 
 	/// <summary>
 	/// Deep clones a hash set.
