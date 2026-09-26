@@ -1,6 +1,8 @@
-## v2.2.0
+## v2.3.0 (minor)
 
-No significant changes detected since v2.2.0.
+Changes since v2.2.0:
+
+- Keep the key comparer when deep cloning a dictionary [minor] ([@Claude](https://github.com/Claude))
 
 ## v2.2.0 (minor)
 
