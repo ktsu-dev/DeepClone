@@ -40,6 +40,62 @@ public class SpecializedCollectionTests
 	}
 
 	/// <summary>
+	/// Tests deep cloning an IReadOnlyDictionary.
+	/// </summary>
+	[TestMethod]
+	public void ReadOnlyDictionary_DeepClone_ShouldCreateIndependentCopy()
+	{
+		// Arrange
+		Dictionary<string, SimpleObject> original = new()
+		{
+			["a"] = new() { Id = 1, Name = "Item1" },
+			["b"] = new() { Id = 2, Name = "Item2" }
+		};
+
+		// Act
+		IReadOnlyDictionary<string, SimpleObject> clone = ((IReadOnlyDictionary<string, SimpleObject>)original).DeepClone();
+
+		// Assert
+		Assert.IsNotNull(clone);
+		Assert.HasCount(original.Count, clone);
+		Assert.AreEqual(1, clone["a"].Id);
+		Assert.AreEqual("Item2", clone["b"].Name);
+		Assert.AreNotSame(original["a"], clone["a"]);
+
+		// Verify independence
+		clone["a"].Name = "Modified";
+		Assert.AreEqual("Item1", original["a"].Name);
+	}
+
+	/// <summary>
+	/// Tests deep cloning an empty IReadOnlyDictionary.
+	/// </summary>
+	[TestMethod]
+	public void ReadOnlyDictionary_DeepClone_Empty_ShouldReturnEmptyDictionary()
+	{
+		// Arrange
+		Dictionary<string, int> original = [];
+
+		// Act
+		IReadOnlyDictionary<string, int> clone = ((IReadOnlyDictionary<string, int>)original).DeepClone();
+
+		// Assert
+		Assert.IsNotNull(clone);
+		Assert.IsEmpty(clone);
+	}
+
+	/// <summary>
+	/// Tests that deep cloning a null IReadOnlyDictionary throws.
+	/// </summary>
+	[TestMethod]
+	public void ReadOnlyDictionary_DeepClone_Null_ShouldThrow()
+	{
+		IReadOnlyDictionary<string, int> original = null!;
+
+		Assert.ThrowsExactly<ArgumentNullException>(() => original.DeepClone());
+	}
+
+	/// <summary>
 	/// Tests deep cloning a SortedSet.
 	/// </summary>
 	[TestMethod]
