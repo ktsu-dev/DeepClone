@@ -96,6 +96,93 @@ public class SpecializedCollectionTests
 	}
 
 	/// <summary>
+	/// Tests that deep cloning a dictionary through IDictionary keeps its key comparer.
+	/// </summary>
+	[TestMethod]
+	public void Dictionary_DeepCloneAsIDictionary_KeepsComparer()
+	{
+		Dictionary<string, int> original = new(StringComparer.OrdinalIgnoreCase) { ["Key"] = 1 };
+
+		IDictionary<string, int> clone = ((IDictionary<string, int>)original).DeepClone();
+
+		Assert.IsTrue(clone.ContainsKey("key"), "A case-insensitive clone should find a key in any case");
+		Assert.AreSame(StringComparer.OrdinalIgnoreCase, ((Dictionary<string, int>)clone).Comparer);
+	}
+
+	/// <summary>
+	/// Tests that deep cloning a dictionary through IReadOnlyDictionary keeps its key comparer.
+	/// </summary>
+	[TestMethod]
+	public void Dictionary_DeepCloneAsIReadOnlyDictionary_KeepsComparer()
+	{
+		Dictionary<string, int> original = new(StringComparer.OrdinalIgnoreCase) { ["Key"] = 1 };
+
+		IReadOnlyDictionary<string, int> clone = ((IReadOnlyDictionary<string, int>)original).DeepClone();
+
+		Assert.IsTrue(clone.ContainsKey("key"), "A case-insensitive clone should find a key in any case");
+	}
+
+	/// <summary>
+	/// Tests that deep cloning a sorted dictionary through IDictionary returns a sorted dictionary with the same comparer.
+	/// </summary>
+	[TestMethod]
+	public void SortedDictionary_DeepCloneAsIDictionary_KeepsTypeAndComparer()
+	{
+		IComparer<string> descending = Comparer<string>.Create((x, y) => string.CompareOrdinal(y, x));
+		SortedDictionary<string, int> original = new(descending) { ["a"] = 1, ["c"] = 3, ["b"] = 2 };
+
+		IDictionary<string, int> clone = ((IDictionary<string, int>)original).DeepClone();
+
+		SortedDictionary<string, int> sortedClone = Assert.IsInstanceOfType<SortedDictionary<string, int>>(clone);
+		Assert.AreSame(descending, sortedClone.Comparer);
+		Assert.AreEqual("c,b,a", string.Join(",", sortedClone.Keys));
+	}
+
+	/// <summary>
+	/// Tests that a Dictionary can be deep cloned without a cast, and that the clone keeps its comparer.
+	/// </summary>
+	[TestMethod]
+	public void Dictionary_DeepClone_WithoutCast_KeepsComparerAndClonesValues()
+	{
+		Dictionary<string, SimpleObject> original = new(StringComparer.OrdinalIgnoreCase)
+		{
+			["Key"] = new() { Id = 1, Name = "Item1" },
+		};
+
+		Dictionary<string, SimpleObject> clone = original.DeepClone();
+
+		Assert.AreSame(original.Comparer, clone.Comparer);
+		Assert.AreEqual(1, clone["key"].Id);
+		Assert.AreNotSame(original["Key"], clone["Key"]);
+	}
+
+	/// <summary>
+	/// Tests that a SortedDictionary can be deep cloned without a cast, and that the clone keeps its comparer.
+	/// </summary>
+	[TestMethod]
+	public void SortedDictionary_DeepClone_WithoutCast_KeepsComparer()
+	{
+		IComparer<string> descending = Comparer<string>.Create((x, y) => string.CompareOrdinal(y, x));
+		SortedDictionary<string, int> original = new(descending) { ["a"] = 1, ["c"] = 3, ["b"] = 2 };
+
+		SortedDictionary<string, int> clone = original.DeepClone();
+
+		Assert.AreSame(descending, clone.Comparer);
+		Assert.AreEqual("c,b,a", string.Join(",", clone.Keys));
+	}
+
+	/// <summary>
+	/// Tests that deep cloning a null Dictionary throws.
+	/// </summary>
+	[TestMethod]
+	public void Dictionary_DeepClone_Null_ShouldThrow()
+	{
+		Dictionary<string, int> original = null!;
+
+		Assert.ThrowsExactly<ArgumentNullException>(() => original.DeepClone());
+	}
+
+	/// <summary>
 	/// Tests deep cloning a SortedSet.
 	/// </summary>
 	[TestMethod]
