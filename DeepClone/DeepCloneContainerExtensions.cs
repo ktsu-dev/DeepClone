@@ -125,8 +125,10 @@ public static class DeepCloneContainerExtensions
 	/// <returns>A new dictionary containing deep clones of the keys and values if they implement IDeepCloneable,
 	/// otherwise containing the original keys and values.</returns>
 	/// <remarks>
-	/// This method returns a new Dictionary with cloned key-value pairs. Both keys and values
-	/// are deep cloned if they implement IDeepCloneable.
+	/// This method returns a new dictionary with cloned key-value pairs. Both keys and values
+	/// are deep cloned if they implement IDeepCloneable. A <see cref="SortedDictionary{TKey, TValue}"/>
+	/// is cloned as a sorted dictionary, and the source's key comparer is kept when the runtime type
+	/// exposes one (<see cref="Dictionary{TKey, TValue}"/> or <see cref="SortedDictionary{TKey, TValue}"/>).
 	///
 	/// Example usage:
 	/// <code>
@@ -139,9 +141,50 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		return source.ToDictionary(
-			pair => DeepClone(pair.Key),
-			pair => DeepClone(pair.Value));
+		return CloneDictionary(source, source);
+	}
+
+	/// <summary>
+	/// Deep clones a dictionary, keeping its key comparer.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="source">The source dictionary to clone.</param>
+	/// <returns>A new dictionary with the source's comparer, containing deep clones of the keys and values
+	/// if they implement IDeepCloneable, otherwise containing the original keys and values.</returns>
+	/// <remarks>
+	/// <see cref="Dictionary{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/> and
+	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
+	/// <c>dictionary.DeepClone()</c> compile without a cast.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static Dictionary<TKey, TValue> DeepClone<TKey, TValue>(this Dictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		Dictionary<TKey, TValue> clone = new(source.Count, source.Comparer);
+		AddClonedPairs(clone, source);
+		return clone;
+	}
+
+	/// <summary>
+	/// Deep clones a sorted dictionary, keeping its key comparer.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="source">The source dictionary to clone.</param>
+	/// <returns>A new sorted dictionary with the source's comparer, containing deep clones of the keys and values
+	/// if they implement IDeepCloneable, otherwise containing the original keys and values.</returns>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static SortedDictionary<TKey, TValue> DeepClone<TKey, TValue>(this SortedDictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		SortedDictionary<TKey, TValue> clone = new(source.Comparer);
+		AddClonedPairs(clone, source);
+		return clone;
 	}
 
 	/// <summary>
@@ -153,7 +196,9 @@ public static class DeepCloneContainerExtensions
 	/// <returns>A new read-only dictionary containing deep clones of the keys and values if they implement IDeepCloneable,
 	/// otherwise containing the original keys and values.</returns>
 	/// <remarks>
-	/// This method returns a new read-only dictionary with cloned key-value pairs.
+	/// This method returns a new read-only dictionary with cloned key-value pairs. As with the
+	/// <see cref="IDictionary{TKey, TValue}"/> overload, a sorted dictionary stays sorted and the source's
+	/// key comparer is kept when the runtime type exposes one.
 	///
 	/// Example usage:
 	/// <code>
@@ -166,9 +211,46 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		return source.ToDictionary(
-			pair => DeepClone(pair.Key),
-			pair => DeepClone(pair.Value));
+		return (IReadOnlyDictionary<TKey, TValue>)CloneDictionary(source, source);
+	}
+
+	/// <summary>
+	/// Creates an empty dictionary of the same kind, and with the same key comparer, as <paramref name="source"/>
+	/// where its runtime type exposes one, and fills it with deep clones of <paramref name="pairs"/>.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="source">The dictionary being cloned, inspected for its runtime type and comparer.</param>
+	/// <param name="pairs">The key-value pairs of the dictionary being cloned.</param>
+	/// <returns>A <see cref="SortedDictionary{TKey, TValue}"/> for a sorted source, otherwise a <see cref="Dictionary{TKey, TValue}"/>.
+	/// Both implement <see cref="IReadOnlyDictionary{TKey, TValue}"/>.</returns>
+	private static IDictionary<TKey, TValue> CloneDictionary<TKey, TValue>(object source, IEnumerable<KeyValuePair<TKey, TValue>> pairs)
+		where TKey : notnull
+	{
+		IDictionary<TKey, TValue> clone = source switch
+		{
+			SortedDictionary<TKey, TValue> sorted => new SortedDictionary<TKey, TValue>(sorted.Comparer),
+			Dictionary<TKey, TValue> dictionary => new Dictionary<TKey, TValue>(dictionary.Count, dictionary.Comparer),
+			_ => new Dictionary<TKey, TValue>(),
+		};
+		AddClonedPairs(clone, pairs);
+		return clone;
+	}
+
+	/// <summary>
+	/// Adds a deep clone of each key-value pair to a destination dictionary.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="dest">The dictionary to add to.</param>
+	/// <param name="pairs">The key-value pairs to clone.</param>
+	private static void AddClonedPairs<TKey, TValue>(IDictionary<TKey, TValue> dest, IEnumerable<KeyValuePair<TKey, TValue>> pairs)
+		where TKey : notnull
+	{
+		foreach (KeyValuePair<TKey, TValue> pair in pairs)
+		{
+			dest.Add(DeepClone(pair.Key), DeepClone(pair.Value));
+		}
 	}
 
 	/// <summary>
