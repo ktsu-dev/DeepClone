@@ -314,8 +314,7 @@ public class DeepCloneTests
 		// Act
 		// Use IEnumerable for list to avoid ambiguity
 		List<SimpleObject?>? clonedList = originalList.DeepClone()?.ToList();
-		// Cast to IDictionary to resolve ambiguity
-		IDictionary<string, SimpleObject?> clonedDict = ((IDictionary<string, SimpleObject?>)originalDict).DeepClone();
+		Dictionary<string, SimpleObject?> clonedDict = originalDict.DeepClone();
 		// Use nullable types for HashSet and Stack
 		HashSet<SimpleObject?> clonedSet = originalSet.DeepClone();
 		Stack<SimpleObject?> clonedStack = originalStack.DeepClone();
