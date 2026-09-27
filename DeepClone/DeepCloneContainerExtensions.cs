@@ -104,8 +104,9 @@ public static class DeepCloneContainerExtensions
 	/// <returns>A new collection containing deep clones of the original items if they implement IDeepCloneable,
 	/// otherwise containing the original items.</returns>
 	/// <remarks>
-	/// This method returns an IEnumerable sequence of cloned items. To get a specific collection type,
-	/// you'll need to convert the result (for example using ToList() or ToArray()).
+	/// The items are cloned when this method is called, so the result is a snapshot: it does not change
+	/// when the source changes, and enumerating it again yields the same cloned instances. To get a
+	/// specific collection type, convert the result (for example using ToList() or ToArray()).
 	///
 	/// Example usage:
 	/// <code>
@@ -113,8 +114,13 @@ public static class DeepCloneContainerExtensions
 	/// var clonedArray = originalArray.DeepClone().ToArray();
 	/// </code>
 	/// </remarks>
-	public static IEnumerable<T> DeepClone<T>(this IEnumerable<T> source) =>
-		source.Select(DeepClone);
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static IEnumerable<T> DeepClone<T>(this IEnumerable<T> source)
+	{
+		Ensure.NotNull(source);
+
+		return [.. source.Select(DeepClone)];
+	}
 
 	/// <summary>
 	/// Deep clones a dictionary.
@@ -314,6 +320,11 @@ public static class DeepCloneContainerExtensions
 	/// var clonedStack = originalStack.DeepClone();
 	/// </code>
 	/// </remarks>
-	public static Stack<T> DeepClone<T>(this Stack<T> source) =>
-		new(source.Reverse().Select(DeepClone));
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static Stack<T> DeepClone<T>(this Stack<T> source)
+	{
+		Ensure.NotNull(source);
+
+		return new(source.Reverse().Select(DeepClone));
+	}
 }
