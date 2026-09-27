@@ -2,6 +2,9 @@
 
 namespace ktsu.DeepClone;
 
+using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+
 /// <summary>
 /// Extension methods for deep cloning collections of objects.
 /// </summary>
@@ -185,6 +188,56 @@ public static class DeepCloneContainerExtensions
 		SortedDictionary<TKey, TValue> clone = new(source.Comparer);
 		AddClonedPairs(clone, source);
 		return clone;
+	}
+
+	/// <summary>
+	/// Deep clones a concurrent dictionary, keeping its key comparer where the target framework exposes it.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="source">The source dictionary to clone.</param>
+	/// <returns>A new concurrent dictionary containing deep clones of the keys and values
+	/// if they implement IDeepCloneable, otherwise containing the original keys and values.</returns>
+	/// <remarks>
+	/// <see cref="ConcurrentDictionary{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/> and
+	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
+	/// <c>concurrentDictionary.DeepClone()</c> compile without a cast. The comparer is kept on .NET 6 and later;
+	/// the .NET Standard builds cannot read it, so the clone uses the default comparer there.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static ConcurrentDictionary<TKey, TValue> DeepClone<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		IEnumerable<KeyValuePair<TKey, TValue>> pairs = source.Select(p => new KeyValuePair<TKey, TValue>(DeepClone(p.Key), DeepClone(p.Value)));
+#if NET6_0_OR_GREATER
+		return new(pairs, source.Comparer);
+#else
+		return new(pairs);
+#endif
+	}
+
+	/// <summary>
+	/// Deep clones a read-only dictionary wrapper.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="source">The source dictionary to clone.</param>
+	/// <returns>A new read-only dictionary wrapping a new dictionary that contains deep clones of the keys and values
+	/// if they implement IDeepCloneable, otherwise containing the original keys and values.</returns>
+	/// <remarks>
+	/// <see cref="ReadOnlyDictionary{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/> and
+	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
+	/// <c>readOnlyDictionary.DeepClone()</c> compile without a cast.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static ReadOnlyDictionary<TKey, TValue> DeepClone<TKey, TValue>(this ReadOnlyDictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		return new(CloneDictionary(source, source));
 	}
 
 	/// <summary>

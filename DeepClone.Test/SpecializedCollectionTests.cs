@@ -3,6 +3,7 @@
 namespace ktsu.DeepClone.Test;
 
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 
 /// <summary>
 /// Tests for specialized collection types not covered by other tests.
@@ -348,9 +349,8 @@ public class SpecializedCollectionTests
 		original.TryAdd(1, new SimpleObject { Id = 1, Name = "Item1" });
 		original.TryAdd(2, new SimpleObject { Id = 2, Name = "Item2" });
 
-		// Act - explicit cast to IDictionary to resolve ambiguity
-		IDictionary<int, SimpleObject> originalDict = original;
-		IDictionary<int, SimpleObject> clone = DeepCloneContainerExtensions.DeepClone(originalDict);
+		// Act
+		ConcurrentDictionary<int, SimpleObject> clone = original.DeepClone();
 
 		// Assert
 		Assert.IsNotNull(clone);
@@ -372,10 +372,56 @@ public class SpecializedCollectionTests
 		Assert.AreEqual("Item1", original[1].Name);
 
 		// Verify adding to clone doesn't affect original
-		clone.Add(3, new SimpleObject { Id = 3, Name = "Item3" });
+		Assert.IsTrue(clone.TryAdd(3, new SimpleObject { Id = 3, Name = "Item3" }));
 		Assert.HasCount(3, clone);
 		Assert.HasCount(2, original);
 		Assert.IsFalse(original.ContainsKey(3), "Original should not contain key 3 added to clone");
+	}
+
+	/// <summary>
+	/// Tests that deep cloning a ConcurrentDictionary keeps its key comparer.
+	/// </summary>
+	[TestMethod]
+	public void ConcurrentDictionary_DeepClone_ShouldKeepComparer()
+	{
+		// Arrange
+		ConcurrentDictionary<string, SimpleObject> original = new(StringComparer.OrdinalIgnoreCase);
+		original.TryAdd("Key", new SimpleObject { Id = 1, Name = "Item1" });
+
+		// Act
+		ConcurrentDictionary<string, SimpleObject> clone = original.DeepClone();
+
+		// Assert
+		Assert.AreSame(StringComparer.OrdinalIgnoreCase, clone.Comparer);
+		Assert.IsTrue(clone.ContainsKey("KEY"), "Clone should look up keys case-insensitively like the source");
+		Assert.AreNotSame(original["Key"], clone["Key"]);
+	}
+
+	/// <summary>
+	/// Tests deep cloning a ReadOnlyDictionary.
+	/// </summary>
+	[TestMethod]
+	public void ReadOnlyDictionaryWrapper_DeepClone_ShouldCreateIndependentCopy()
+	{
+		// Arrange
+		Dictionary<string, SimpleObject> inner = new(StringComparer.OrdinalIgnoreCase)
+		{
+			["Key"] = new SimpleObject { Id = 1, Name = "Item1" },
+		};
+		ReadOnlyDictionary<string, SimpleObject> original = new(inner);
+
+		// Act
+		ReadOnlyDictionary<string, SimpleObject> clone = original.DeepClone();
+
+		// Assert
+		Assert.HasCount(1, clone);
+		Assert.AreNotSame(original["Key"], clone["Key"]);
+		Assert.AreEqual(1, clone["Key"].Id);
+		Assert.AreEqual("Item1", clone["Key"].Name);
+
+		// Verify independence - the clone does not follow later changes to the wrapped dictionary
+		inner["Other"] = new SimpleObject { Id = 2, Name = "Item2" };
+		Assert.HasCount(1, clone);
 	}
 }
 
