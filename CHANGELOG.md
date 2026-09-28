@@ -1,6 +1,8 @@
-## v2.4.0
+## v2.4.1-pre.1 (prerelease)
 
-No significant changes detected since v2.4.0.
+Changes since v2.4.0:
+
+- Bump Polyfill from 11.4.0 to 11.4.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
 ## v2.4.0 (minor)
 
@@ -90,14 +92,18 @@ Changes since v2.0.0:
 - docs: correct README, DESCRIPTION and TAGS metadata ([@matt-edmondson](https://github.com/matt-edmondson))
 - Stop Update SDKs failing when there is nothing to update ([@matt-edmondson](https://github.com/matt-edmondson))
 - Fix ktsu.Sdk 2.27 analyzer errors: LF line endings and new file header [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
 - Sync .runsettings ([@KtsuTools](https://github.com/KtsuTools))
 - Sync .editorconfig ([@KtsuTools](https://github.com/KtsuTools))
 - Sync .gitattributes ([@KtsuTools](https://github.com/KtsuTools))
+- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
 - chore: remove unused SourceLink package versions ([@matt-edmondson](https://github.com/matt-edmondson))
 - chore: remove unused SourceLink package references ([@matt-edmondson](https://github.com/matt-edmondson))
+- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
 - Remove legacy build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor null checks in DeepCloneContainerExtensions and update Polyfill package version to 9.7.7 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Enhance assertions in tests with descriptive messages for clarity ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove .github\workflows\project.yml ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update project files and tests for improved functionality and dependencies ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add CLAUDE.md for project guidance and documentation ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update project configuration and CI/CD settings ([@matt-edmondson](https://github.com/matt-edmondson))
@@ -159,9 +165,11 @@ Changes since v2.0.24:
 Changes since v2.0.23:
 
 - Fix ktsu.Sdk 2.27 analyzer errors: LF line endings and new file header [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
 - Sync .runsettings ([@KtsuTools](https://github.com/KtsuTools))
 - Sync .editorconfig ([@KtsuTools](https://github.com/KtsuTools))
 - Sync .gitattributes ([@KtsuTools](https://github.com/KtsuTools))
+- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
 
 ## v2.0.23 (patch)
 
@@ -243,10 +251,13 @@ Changes since v2.0.11:
 
 - chore: remove unused SourceLink package versions ([@matt-edmondson](https://github.com/matt-edmondson))
 - chore: remove unused SourceLink package references ([@matt-edmondson](https://github.com/matt-edmondson))
+- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
 
 ## v2.0.12-pre.1 (prerelease)
 
-No significant changes detected since v2.0.12.
+Changes since v2.0.11:
+
+- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
 
 ## v2.0.11 (patch)
 
@@ -260,7 +271,11 @@ Changes since v2.0.10:
 
 ## v2.0.11-pre.1 (prerelease)
 
-No significant changes detected since v2.0.11.
+Changes since v2.0.10:
+
+- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v2.0.10 (patch)
 
@@ -307,7 +322,9 @@ Changes since v2.0.9-pre.1:
 
 ## v2.0.9-pre.1 (prerelease)
 
-No significant changes detected since v2.0.9.
+Changes since v2.0.8:
+
+- Refactor null checks in DeepCloneContainerExtensions and update Polyfill package version to 9.7.7 ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v2.0.8 (patch)
 
@@ -320,13 +337,6 @@ Changes since v2.0.7:
 Changes since v2.0.6:
 
 - Remove .github\workflows\project.yml ([@matt-edmondson](https://github.com/matt-edmondson))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .gitignore ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v2.0.7-pre.2 (prerelease)
 
@@ -340,7 +350,10 @@ Changes since v2.0.7-pre.1:
 
 ## v2.0.7-pre.1 (prerelease)
 
-No significant changes detected since v2.0.7.
+Changes since v2.0.6:
+
+- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v2.0.6 (patch)
 
@@ -363,7 +376,10 @@ Changes since v2.0.6-pre.1:
 
 ## v2.0.6-pre.1 (prerelease)
 
-No significant changes detected since v2.0.6.
+Changes since v2.0.5:
+
+- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v2.0.5 (patch)
 
@@ -402,7 +418,15 @@ Changes since v2.0.0:
 
 ## v2.0.1-pre.1 (prerelease)
 
-No significant changes detected since v2.0.1.
+Changes since v2.0.0:
+
+- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .editorconfig ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .gitattributes ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .gitignore ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .mailmap ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .runsettings ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v2.0.0 (major)
 
@@ -477,7 +501,9 @@ Changes since v1.3.1-pre.1:
 
 ## v1.3.1-pre.1 (prerelease)
 
-No significant changes detected since v1.3.1.
+Changes since v1.3.0:
+
+- Sync .editorconfig ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v1.3.0 (minor)
 
@@ -685,7 +711,9 @@ Changes since v1.1.16-pre.1:
 
 ## v1.1.16-pre.1 (prerelease)
 
-No significant changes detected since v1.1.16.
+Changes since v1.1.15-pre.1:
+
+- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v1.1.15-pre.1 (prerelease)
 
@@ -725,9 +753,10 @@ Changes since v1.1.9:
 
 ## v1.1.10-pre.1 (prerelease)
 
-Changes since v1.1.10:
+Changes since v1.1.9:
 
 - Renamed metadata files ([@matt-edmondson](https://github.com/matt-edmondson))
+- Replace LICENSE file with LICENSE.md and update copyright information ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v1.1.9 (patch)
 
