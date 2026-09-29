@@ -1,6 +1,4 @@
-## v2.4.2 (patch)
+## v2.4.2
 
-Changes since v2.4.1:
-
-- Move CI onto the shared ci-shared.yml pipeline ([@Claude](https://github.com/Claude))
+No significant changes detected since v2.4.2.
 
