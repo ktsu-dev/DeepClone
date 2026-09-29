@@ -4,6 +4,7 @@ namespace ktsu.DeepClone;
 
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Reflection;
 
 /// <summary>
 /// Extension methods for deep cloning collections of objects.
@@ -96,8 +97,49 @@ public static class DeepCloneContainerExtensions
 	/// This internal method is used by all other extension methods to handle deep cloning
 	/// of individual elements. It checks if the object implements IDeepCloneable and calls
 	/// DeepClone() if it does, otherwise it returns the original object.
+	///
+	/// A <see cref="KeyValuePair{TKey, TValue}"/> is rebuilt from a deep clone of its key and value.
+	/// Without that, a dictionary reached only as a sequence of pairs (an <see cref="IReadOnlyDictionary{TKey, TValue}"/>
+	/// passed to <see cref="DeepCloneFrom{T}(ICollection{T}, IEnumerable{T})"/>, or LINQ over a dictionary)
+	/// came back sharing its keys and values with the source (ktsu-dev/DeepClone#82).
 	/// </remarks>
-	private static T DeepClone<T>(T source) => source == null ? default! : source is IDeepCloneable cloneable ? (T)cloneable.DeepClone() : source;
+	private static T DeepClone<T>(T source) =>
+		source == null
+			? default!
+			: source is IDeepCloneable cloneable
+				? (T)cloneable.DeepClone()
+				: PairCloner<T>.Clone is { } clonePair
+					? clonePair(source)
+					: source;
+
+	/// <summary>
+	/// Deep clones the key and value of a key-value pair.
+	/// </summary>
+	/// <typeparam name="TKey">The type of the key.</typeparam>
+	/// <typeparam name="TValue">The type of the value.</typeparam>
+	/// <param name="pair">The pair to clone.</param>
+	/// <returns>A pair holding deep clones of the key and value.</returns>
+	private static KeyValuePair<TKey, TValue> ClonePair<TKey, TValue>(KeyValuePair<TKey, TValue> pair) =>
+		new(DeepClone(pair.Key), DeepClone(pair.Value));
+
+	/// <summary>
+	/// Caches, per element type, the function that clones it as a key-value pair.
+	/// </summary>
+	/// <typeparam name="T">The element type.</typeparam>
+	private static class PairCloner<T>
+	{
+		/// <summary>
+		/// Gets <see cref="ClonePair{TKey, TValue}"/> bound to <typeparamref name="T"/> when it is a
+		/// <see cref="KeyValuePair{TKey, TValue}"/>, otherwise <see langword="null"/>.
+		/// </summary>
+		internal static Func<T, T>? Clone { get; } =
+			typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
+				? typeof(DeepCloneContainerExtensions)
+					.GetMethod(nameof(ClonePair), BindingFlags.NonPublic | BindingFlags.Static)!
+					.MakeGenericMethod(typeof(T).GetGenericArguments())
+					.CreateDelegate<Func<T, T>>()
+				: null;
+	}
 
 	/// <summary>
 	/// Deep clones a collection of objects.
