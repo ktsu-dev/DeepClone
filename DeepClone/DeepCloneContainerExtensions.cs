@@ -4,7 +4,6 @@ namespace ktsu.DeepClone;
 
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
-using System.Reflection;
 
 /// <summary>
 /// Extension methods for deep cloning collections of objects.
@@ -107,36 +106,49 @@ public static class DeepCloneContainerExtensions
 	{
 		null => default!,
 		IDeepCloneable cloneable => (T)cloneable.DeepClone(),
-		_ when PairCloner<T>.Clone is { } clonePair => clonePair(source),
+		_ when PairCloner<T>.Instance is { } pairCloner => pairCloner.Clone(source),
 		_ => source,
 	};
+
+	/// <summary>
+	/// Deep clones an element of a particular type.
+	/// </summary>
+	/// <typeparam name="T">The element type.</typeparam>
+	private interface IElementCloner<T>
+	{
+		/// <summary>
+		/// Deep clones <paramref name="source"/>.
+		/// </summary>
+		/// <param name="source">The element to clone.</param>
+		/// <returns>The clone.</returns>
+		public T Clone(T source);
+	}
 
 	/// <summary>
 	/// Deep clones the key and value of a key-value pair.
 	/// </summary>
 	/// <typeparam name="TKey">The type of the key.</typeparam>
 	/// <typeparam name="TValue">The type of the value.</typeparam>
-	/// <param name="pair">The pair to clone.</param>
-	/// <returns>A pair holding deep clones of the key and value.</returns>
-	private static KeyValuePair<TKey, TValue> ClonePair<TKey, TValue>(KeyValuePair<TKey, TValue> pair) =>
-		new(DeepClone(pair.Key), DeepClone(pair.Value));
+	private sealed class PairElementCloner<TKey, TValue> : IElementCloner<KeyValuePair<TKey, TValue>>
+	{
+		/// <inheritdoc />
+		public KeyValuePair<TKey, TValue> Clone(KeyValuePair<TKey, TValue> source) =>
+			new(DeepClone(source.Key), DeepClone(source.Value));
+	}
 
 	/// <summary>
-	/// Caches, per element type, the function that clones it as a key-value pair.
+	/// Caches, per element type, the cloner that clones it as a key-value pair.
 	/// </summary>
 	/// <typeparam name="T">The element type.</typeparam>
 	private static class PairCloner<T>
 	{
 		/// <summary>
-		/// Gets <see cref="ClonePair{TKey, TValue}"/> bound to <typeparamref name="T"/> when it is a
+		/// Gets a <see cref="PairElementCloner{TKey, TValue}"/> for <typeparamref name="T"/> when it is a
 		/// <see cref="KeyValuePair{TKey, TValue}"/>, otherwise <see langword="null"/>.
 		/// </summary>
-		internal static Func<T, T>? Clone { get; } =
+		internal static IElementCloner<T>? Instance { get; } =
 			typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
-				? typeof(DeepCloneContainerExtensions)
-					.GetMethod(nameof(ClonePair), BindingFlags.NonPublic | BindingFlags.Static)!
-					.MakeGenericMethod(typeof(T).GetGenericArguments())
-					.CreateDelegate<Func<T, T>>()
+				? (IElementCloner<T>)Activator.CreateInstance(typeof(PairElementCloner<,>).MakeGenericType(typeof(T).GetGenericArguments()))!
 				: null;
 	}
 

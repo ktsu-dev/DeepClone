@@ -138,6 +138,6 @@ public class EnumerableCloneTests
 		KeyValuePair<string, int>[] clone = [.. original.AsEnumerable().DeepClone()];
 
 		// Assert
-		CollectionAssert.AreEqual(original, clone);
+		Assert.AreSequenceEqual(original, clone);
 	}
 }
