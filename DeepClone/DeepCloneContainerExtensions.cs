@@ -103,14 +103,13 @@ public static class DeepCloneContainerExtensions
 	/// passed to <see cref="DeepCloneFrom{T}(ICollection{T}, IEnumerable{T})"/>, or LINQ over a dictionary)
 	/// came back sharing its keys and values with the source (ktsu-dev/DeepClone#82).
 	/// </remarks>
-	private static T DeepClone<T>(T source) =>
-		source == null
-			? default!
-			: source is IDeepCloneable cloneable
-				? (T)cloneable.DeepClone()
-				: PairCloner<T>.Clone is { } clonePair
-					? clonePair(source)
-					: source;
+	private static T DeepClone<T>(T source) => source switch
+	{
+		null => default!,
+		IDeepCloneable cloneable => (T)cloneable.DeepClone(),
+		_ when PairCloner<T>.Clone is { } clonePair => clonePair(source),
+		_ => source,
+	};
 
 	/// <summary>
 	/// Deep clones the key and value of a key-value pair.
