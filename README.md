@@ -601,8 +601,8 @@ Extension methods for deep cloning various container types.
 | Name | Container Type | Description |
 |------|---------------|-------------|
 | `DeepClone<T>` | `IEnumerable<T?>?` | Creates a deep clone of an enumerable collection |
-| `DeepClone<TKey, TValue>` | `IDictionary<TKey, TValue?>?` | Creates a deep clone of a dictionary |
-| `DeepClone<TKey, TValue>` | `IReadOnlyDictionary<TKey, TValue?>?` | Creates a deep clone of a read-only dictionary |
+| `DeepClone<TKey, TValue>` | `IDictionary<TKey, TValue?>?` | Creates a deep clone of a dictionary, preserving the key comparer where the runtime type exposes one |
+| `DeepClone<TKey, TValue>` | `IReadOnlyDictionary<TKey, TValue?>?` | Creates a deep clone of a read-only dictionary, preserving the key comparer where the runtime type exposes one |
 | `DeepClone<T>` | `HashSet<T?>?` | Creates a deep clone of a hash set, preserving the comparer |
 | `DeepClone<T>` | `SortedSet<T?>?` | Creates a deep clone of a sorted set, preserving the comparer |
 | `DeepClone<T>` | `Stack<T?>?` | Creates a deep clone of a stack, preserving the element order |
