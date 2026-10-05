@@ -4,6 +4,9 @@ namespace ktsu.DeepClone;
 
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+#if NET
+using System.Collections.Immutable;
+#endif
 
 /// <summary>
 /// Extension methods for deep cloning collections of objects.
@@ -188,9 +191,12 @@ public static class DeepCloneContainerExtensions
 	/// otherwise containing the original keys and values.</returns>
 	/// <remarks>
 	/// This method returns a new dictionary with cloned key-value pairs. Both keys and values
-	/// are deep cloned if they implement IDeepCloneable. A <see cref="SortedDictionary{TKey, TValue}"/>
-	/// is cloned as a sorted dictionary, and the source's key comparer is kept when the runtime type
-	/// exposes one (<see cref="Dictionary{TKey, TValue}"/> or <see cref="SortedDictionary{TKey, TValue}"/>).
+	/// are deep cloned if they implement IDeepCloneable. The source's key comparer is kept when the runtime
+	/// type exposes one: <see cref="Dictionary{TKey, TValue}"/>, <see cref="SortedDictionary{TKey, TValue}"/>,
+	/// <see cref="SortedList{TKey, TValue}"/>, <see cref="ConcurrentDictionary{TKey, TValue}"/> (.NET 6 and later),
+	/// and, on .NET, <c>ImmutableDictionary</c> and <c>ImmutableSortedDictionary</c>. A sorted source stays sorted,
+	/// a sorted list or concurrent dictionary is cloned as the same type, and an immutable source is cloned as the
+	/// mutable dictionary of the same kind.
 	///
 	/// Example usage:
 	/// <code>
@@ -309,8 +315,11 @@ public static class DeepCloneContainerExtensions
 	/// otherwise containing the original keys and values.</returns>
 	/// <remarks>
 	/// This method returns a new read-only dictionary with cloned key-value pairs. As with the
-	/// <see cref="IDictionary{TKey, TValue}"/> overload, a sorted dictionary stays sorted and the source's
-	/// key comparer is kept when the runtime type exposes one.
+	/// <see cref="IDictionary{TKey, TValue}"/> overload, a sorted source stays sorted and the source's key comparer
+	/// is kept when the runtime type exposes one: <see cref="Dictionary{TKey, TValue}"/>,
+	/// <see cref="SortedDictionary{TKey, TValue}"/>, <see cref="SortedList{TKey, TValue}"/>,
+	/// <see cref="ConcurrentDictionary{TKey, TValue}"/> (.NET 6 and later), and, on .NET, <c>ImmutableDictionary</c>
+	/// and <c>ImmutableSortedDictionary</c>.
 	///
 	/// Example usage:
 	/// <code>
@@ -334,8 +343,9 @@ public static class DeepCloneContainerExtensions
 	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
 	/// <param name="source">The dictionary being cloned, inspected for its runtime type and comparer.</param>
 	/// <param name="pairs">The key-value pairs of the dictionary being cloned.</param>
-	/// <returns>A <see cref="SortedDictionary{TKey, TValue}"/> for a sorted source, otherwise a <see cref="Dictionary{TKey, TValue}"/>.
-	/// Both implement <see cref="IReadOnlyDictionary{TKey, TValue}"/>.</returns>
+	/// <returns>A <see cref="SortedList{TKey, TValue}"/> or <see cref="ConcurrentDictionary{TKey, TValue}"/> for a source of
+	/// that type, a <see cref="SortedDictionary{TKey, TValue}"/> for any other sorted source, otherwise a
+	/// <see cref="Dictionary{TKey, TValue}"/>. All of them implement <see cref="IReadOnlyDictionary{TKey, TValue}"/>.</returns>
 	private static IDictionary<TKey, TValue> CloneDictionary<TKey, TValue>(object source, IEnumerable<KeyValuePair<TKey, TValue>> pairs)
 		where TKey : notnull
 	{
@@ -343,6 +353,15 @@ public static class DeepCloneContainerExtensions
 		{
 			SortedDictionary<TKey, TValue> sorted => new SortedDictionary<TKey, TValue>(sorted.Comparer),
 			Dictionary<TKey, TValue> dictionary => new Dictionary<TKey, TValue>(dictionary.Count, dictionary.Comparer),
+			SortedList<TKey, TValue> sortedList => new SortedList<TKey, TValue>(sortedList.Count, sortedList.Comparer),
+#if NET6_0_OR_GREATER
+			ConcurrentDictionary<TKey, TValue> concurrent => new ConcurrentDictionary<TKey, TValue>(concurrent.Comparer),
+#endif
+#if NET
+			// The immutable types cannot be filled in place, so the clone is the mutable type with the same lookup.
+			ImmutableSortedDictionary<TKey, TValue> immutableSorted => new SortedDictionary<TKey, TValue>(immutableSorted.KeyComparer),
+			ImmutableDictionary<TKey, TValue> immutable => new Dictionary<TKey, TValue>(immutable.Count, immutable.KeyComparer),
+#endif
 			_ => new Dictionary<TKey, TValue>(),
 		};
 		AddClonedPairs(clone, pairs);
