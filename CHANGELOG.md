@@ -1,8 +1,8 @@
-## v2.4.3-pre.1 (prerelease)
+## v2.4.3 (patch)
 
 Changes since v2.4.2:
 
-- Bump Polyfill from 11.4.1 to 11.4.2 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- [patch] Keep the key comparer when cloning other dictionaries through IDictionary ([@Claude](https://github.com/Claude))
 
 ## v2.4.2 (patch)
 
