@@ -256,6 +256,86 @@ public static class DeepCloneContainerExtensions
 	}
 
 	/// <summary>
+	/// Deep clones a sorted list, keeping its key comparer.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the list.</typeparam>
+	/// <typeparam name="TValue">The type of values in the list.</typeparam>
+	/// <param name="source">The source list to clone.</param>
+	/// <returns>A new sorted list with the source's comparer, containing deep clones of the keys and values
+	/// if they implement IDeepCloneable, otherwise containing the original keys and values.</returns>
+	/// <remarks>
+	/// <see cref="SortedList{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/> and
+	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
+	/// <c>sortedList.DeepClone()</c> compile without a cast.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static SortedList<TKey, TValue> DeepClone<TKey, TValue>(this SortedList<TKey, TValue> source)
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		SortedList<TKey, TValue> clone = new(source.Count, source.Comparer);
+		AddClonedPairs(clone, source);
+		return clone;
+	}
+
+#if NET
+	/// <summary>
+	/// Deep clones an immutable dictionary, keeping its key and value comparers.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="source">The source dictionary to clone.</param>
+	/// <returns>A new immutable dictionary with the source's comparers, containing deep clones of the keys and values
+	/// if they implement IDeepCloneable, otherwise containing the original keys and values.</returns>
+	/// <remarks>
+	/// <see cref="ImmutableDictionary{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/> and
+	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
+	/// <c>immutableDictionary.DeepClone()</c> compile without a cast.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static ImmutableDictionary<TKey, TValue> DeepClone<TKey, TValue>(this ImmutableDictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		return ImmutableDictionary.CreateRange(source.KeyComparer, source.ValueComparer, ClonePairs(source));
+	}
+
+	/// <summary>
+	/// Deep clones an immutable sorted dictionary, keeping its key and value comparers.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="source">The source dictionary to clone.</param>
+	/// <returns>A new immutable sorted dictionary with the source's comparers, containing deep clones of the keys and
+	/// values if they implement IDeepCloneable, otherwise containing the original keys and values.</returns>
+	/// <remarks>
+	/// <see cref="ImmutableSortedDictionary{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/>
+	/// and <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
+	/// <c>immutableSortedDictionary.DeepClone()</c> compile without a cast.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static ImmutableSortedDictionary<TKey, TValue> DeepClone<TKey, TValue>(this ImmutableSortedDictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		return ImmutableSortedDictionary.CreateRange(source.KeyComparer, source.ValueComparer, ClonePairs(source));
+	}
+
+	/// <summary>
+	/// Deep clones the key and value of each pair.
+	/// </summary>
+	/// <typeparam name="TKey">The type of the keys.</typeparam>
+	/// <typeparam name="TValue">The type of the values.</typeparam>
+	/// <param name="pairs">The key-value pairs to clone.</param>
+	/// <returns>The cloned pairs.</returns>
+	private static IEnumerable<KeyValuePair<TKey, TValue>> ClonePairs<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> pairs) =>
+		pairs.Select(p => new KeyValuePair<TKey, TValue>(DeepClone(p.Key), DeepClone(p.Value)));
+#endif
+
+	/// <summary>
 	/// Deep clones a concurrent dictionary, keeping its key comparer where the target framework exposes it.
 	/// </summary>
 	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>

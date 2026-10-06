@@ -603,13 +603,14 @@ Extension methods for deep cloning various container types.
 | `DeepClone<T>` | `IEnumerable<T?>?` | Creates a deep clone of an enumerable collection |
 | `DeepClone<TKey, TValue>` | `IDictionary<TKey, TValue?>?` | Creates a deep clone of a dictionary, preserving the key comparer where the runtime type exposes one |
 | `DeepClone<TKey, TValue>` | `IReadOnlyDictionary<TKey, TValue?>?` | Creates a deep clone of a read-only dictionary, preserving the key comparer where the runtime type exposes one |
+| `DeepClone<TKey, TValue>` | `SortedList<TKey, TValue>` | Creates a deep clone of a sorted list, preserving the key comparer |
 | `DeepClone<T>` | `HashSet<T?>?` | Creates a deep clone of a hash set, preserving the comparer |
 | `DeepClone<T>` | `SortedSet<T?>?` | Creates a deep clone of a sorted set, preserving the comparer |
 | `DeepClone<T>` | `Stack<T?>?` | Creates a deep clone of a stack, preserving the element order |
 | `DeepClone<T>` | `ImmutableArray<T>` | Creates a deep clone of an immutable array |
 | `DeepClone<T>` | `ImmutableList<T>` | Creates a deep clone of an immutable list |
-| `DeepClone<TKey, TValue>` | `ImmutableDictionary<TKey, TValue>` | Creates a deep clone of an immutable dictionary |
-| `DeepClone<TKey, TValue>` | `ImmutableSortedDictionary<TKey, TValue>` | Creates a deep clone of an immutable sorted dictionary |
+| `DeepClone<TKey, TValue>` | `ImmutableDictionary<TKey, TValue>` | Creates a deep clone of an immutable dictionary, preserving the key and value comparers (.NET only) |
+| `DeepClone<TKey, TValue>` | `ImmutableSortedDictionary<TKey, TValue>` | Creates a deep clone of an immutable sorted dictionary, preserving the key and value comparers (.NET only) |
 | `DeepClone<T>` | `ImmutableHashSet<T>` | Creates a deep clone of an immutable hash set |
 | `DeepClone<T>` | `ImmutableSortedSet<T>` | Creates a deep clone of an immutable sorted set |
 | `DeepClone<T>` | `ImmutableStack<T>` | Creates a deep clone of an immutable stack |
