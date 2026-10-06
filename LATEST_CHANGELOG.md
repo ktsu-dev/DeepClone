@@ -1,8 +1,6 @@
-## v2.4.4 (patch)
+## v2.4.5-pre.1 (prerelease)
 
-Changes since v2.4.3:
+Changes since v2.4.4:
 
-- Justify the reflection that reads ReadOnlyDictionary's wrapped dictionary ([@Claude](https://github.com/Claude))
-- [patch] Keep the wrapped dictionary's comparer when cloning a ReadOnlyDictionary ([@Claude](https://github.com/Claude))
-- [patch] Let SortedList and the immutable dictionaries call DeepClone() directly ([@Claude](https://github.com/Claude))
+- Bump Polyfill from 11.4.2 to 11.4.3 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
