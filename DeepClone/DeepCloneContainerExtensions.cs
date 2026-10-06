@@ -387,6 +387,10 @@ public static class DeepCloneContainerExtensions
 	private static class WrappedDictionary<TKey, TValue>
 		where TKey : notnull
 	{
+		[System.Diagnostics.CodeAnalysis.SuppressMessage(
+			"Major Code Smell",
+			"S3011:Reflection should not be used to increase accessibility of classes, methods, or fields",
+			Justification = "ReadOnlyDictionary exposes the dictionary it wraps only through a protected property, and the getter is only read, never used to modify it. Without it the clone cannot keep the wrapped dictionary's comparer (ktsu-dev/DeepClone#87).")]
 		private static readonly Func<ReadOnlyDictionary<TKey, TValue>, IDictionary<TKey, TValue>> Getter =
 			typeof(ReadOnlyDictionary<TKey, TValue>)
 				.GetProperty("Dictionary", BindingFlags.Instance | BindingFlags.NonPublic)!
