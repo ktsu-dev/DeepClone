@@ -4,6 +4,7 @@ namespace ktsu.DeepClone;
 
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Reflection;
 #if NET
 using System.Collections.Immutable;
 #endif
@@ -196,7 +197,8 @@ public static class DeepCloneContainerExtensions
 	/// <see cref="SortedList{TKey, TValue}"/>, <see cref="ConcurrentDictionary{TKey, TValue}"/> (.NET 6 and later),
 	/// and, on .NET, <c>ImmutableDictionary</c> and <c>ImmutableSortedDictionary</c>. A sorted source stays sorted,
 	/// a sorted list or concurrent dictionary is cloned as the same type, and an immutable source is cloned as the
-	/// mutable dictionary of the same kind.
+	/// mutable dictionary of the same kind. A <see cref="ReadOnlyDictionary{TKey, TValue}"/> is cloned according to the
+	/// dictionary it wraps.
 	///
 	/// Example usage:
 	/// <code>
@@ -374,7 +376,9 @@ public static class DeepCloneContainerExtensions
 	/// <remarks>
 	/// <see cref="ReadOnlyDictionary{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/> and
 	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
-	/// <c>readOnlyDictionary.DeepClone()</c> compile without a cast.
+	/// <c>readOnlyDictionary.DeepClone()</c> compile without a cast. The new wrapper wraps a dictionary of the same
+	/// kind, and with the same key comparer, as the dictionary the source wraps, as described for the
+	/// <see cref="IDictionary{TKey, TValue}"/> overload.
 	/// </remarks>
 	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
 	public static ReadOnlyDictionary<TKey, TValue> DeepClone<TKey, TValue>(this ReadOnlyDictionary<TKey, TValue> source)
@@ -421,7 +425,8 @@ public static class DeepCloneContainerExtensions
 	/// </summary>
 	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
 	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
-	/// <param name="source">The dictionary being cloned, inspected for its runtime type and comparer.</param>
+	/// <param name="source">The dictionary being cloned, inspected for its runtime type and comparer. A
+	/// <see cref="ReadOnlyDictionary{TKey, TValue}"/> is looked through to the dictionary it wraps.</param>
 	/// <param name="pairs">The key-value pairs of the dictionary being cloned.</param>
 	/// <returns>A <see cref="SortedList{TKey, TValue}"/> or <see cref="ConcurrentDictionary{TKey, TValue}"/> for a source of
 	/// that type, a <see cref="SortedDictionary{TKey, TValue}"/> for any other sorted source, otherwise a
@@ -429,6 +434,11 @@ public static class DeepCloneContainerExtensions
 	private static IDictionary<TKey, TValue> CloneDictionary<TKey, TValue>(object source, IEnumerable<KeyValuePair<TKey, TValue>> pairs)
 		where TKey : notnull
 	{
+		while (source is ReadOnlyDictionary<TKey, TValue> readOnly)
+		{
+			source = WrappedDictionary<TKey, TValue>.Of(readOnly);
+		}
+
 		IDictionary<TKey, TValue> clone = source switch
 		{
 			SortedDictionary<TKey, TValue> sorted => new SortedDictionary<TKey, TValue>(sorted.Comparer),
@@ -446,6 +456,33 @@ public static class DeepCloneContainerExtensions
 		};
 		AddClonedPairs(clone, pairs);
 		return clone;
+	}
+
+	/// <summary>
+	/// Reads the dictionary a <see cref="ReadOnlyDictionary{TKey, TValue}"/> wraps, which it exposes only through
+	/// its protected <c>Dictionary</c> property, so a clone can keep that dictionary's kind and comparer.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	private static class WrappedDictionary<TKey, TValue>
+		where TKey : notnull
+	{
+		[System.Diagnostics.CodeAnalysis.SuppressMessage(
+			"Major Code Smell",
+			"S3011:Reflection should not be used to increase accessibility of classes, methods, or fields",
+			Justification = "ReadOnlyDictionary exposes the dictionary it wraps only through a protected property, and the getter is only read, never used to modify it. Without it the clone cannot keep the wrapped dictionary's comparer (ktsu-dev/DeepClone#87).")]
+		private static readonly Func<ReadOnlyDictionary<TKey, TValue>, IDictionary<TKey, TValue>> Getter =
+			typeof(ReadOnlyDictionary<TKey, TValue>)
+				.GetProperty("Dictionary", BindingFlags.Instance | BindingFlags.NonPublic)!
+				.GetGetMethod(nonPublic: true)!
+				.CreateDelegate<Func<ReadOnlyDictionary<TKey, TValue>, IDictionary<TKey, TValue>>>();
+
+		/// <summary>
+		/// Gets the dictionary that <paramref name="readOnly"/> wraps.
+		/// </summary>
+		/// <param name="readOnly">The read-only wrapper.</param>
+		/// <returns>The wrapped dictionary.</returns>
+		internal static IDictionary<TKey, TValue> Of(ReadOnlyDictionary<TKey, TValue> readOnly) => Getter(readOnly);
 	}
 
 	/// <summary>

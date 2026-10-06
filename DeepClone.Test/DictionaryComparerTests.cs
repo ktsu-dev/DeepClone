@@ -4,6 +4,7 @@ namespace ktsu.DeepClone.Test;
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 
 /// <summary>
 /// Tests that cloning a dictionary through <see cref="IDictionary{TKey, TValue}"/> or
@@ -121,5 +122,83 @@ public class DictionaryComparerTests
 		clone["d"] = 4;
 
 		CollectionAssert.AreEqual(DescendingKeys, clone.Keys.ToArray());
+	}
+
+	/// <summary>
+	/// Tests that a read-only dictionary over a case-insensitive dictionary keeps the wrapped dictionary's comparer
+	/// when cloned through its concrete overload (ktsu-dev/DeepClone#87).
+	/// </summary>
+	[TestMethod]
+	public void ReadOnlyDictionary_KeepsWrappedComparer()
+	{
+		ReadOnlyDictionary<string, int> original = new(new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["Key"] = 1 });
+
+		ReadOnlyDictionary<string, int> clone = original.DeepClone();
+
+		Assert.IsTrue(clone.ContainsKey("KEY"));
+	}
+
+	/// <summary>
+	/// Tests that a read-only dictionary over a case-insensitive dictionary keeps the wrapped dictionary's comparer
+	/// when cloned through IReadOnlyDictionary.
+	/// </summary>
+	[TestMethod]
+	public void ReadOnlyDictionary_ThroughIReadOnlyDictionary_KeepsWrappedComparer()
+	{
+		ReadOnlyDictionary<string, int> original = new(new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["Key"] = 1 });
+
+		IReadOnlyDictionary<string, int> clone = ((IReadOnlyDictionary<string, int>)original).DeepClone();
+
+		Assert.IsTrue(clone.ContainsKey("KEY"));
+	}
+
+	/// <summary>
+	/// Tests that a read-only dictionary cloned through IDictionary keeps the wrapped dictionary's comparer.
+	/// </summary>
+	[TestMethod]
+	public void ReadOnlyDictionary_ThroughIDictionary_KeepsWrappedComparer()
+	{
+		ReadOnlyDictionary<string, int> original = new(new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["Key"] = 1 });
+
+		IDictionary<string, int> clone = ((IDictionary<string, int>)original).DeepClone();
+
+		Assert.IsTrue(clone.ContainsKey("KEY"));
+	}
+
+	/// <summary>
+	/// Tests that a read-only dictionary over a reference-equality dictionary holding two equal but distinct keys
+	/// clones without throwing and keeps both entries.
+	/// </summary>
+	[TestMethod]
+	public void ReadOnlyDictionary_WithReferenceEquality_ClonesEqualKeys()
+	{
+		Dictionary<object, int> inner = new(ReferenceEqualityComparer.Instance)
+		{
+			[new string('k', 1)] = 1,
+			[new string('k', 1)] = 2,
+		};
+		ReadOnlyDictionary<object, int> original = new(inner);
+
+		ReadOnlyDictionary<object, int> clone = original.DeepClone();
+
+		Assert.HasCount(2, clone);
+	}
+
+	/// <summary>
+	/// Tests that a read-only dictionary over a sorted dictionary, itself wrapped in a second read-only dictionary,
+	/// clones to a dictionary that stays sorted by the innermost comparer.
+	/// </summary>
+	[TestMethod]
+	public void NestedReadOnlyDictionary_OverSortedDictionary_KeepsComparerAndOrder()
+	{
+		Comparer<string> descending = Comparer<string>.Create((x, y) => string.CompareOrdinal(y, x));
+		SortedDictionary<string, int> inner = new(descending) { ["a"] = 1, ["c"] = 3, ["b"] = 2 };
+		ReadOnlyDictionary<string, int> original = new(new ReadOnlyDictionary<string, int>(inner));
+
+		IDictionary<string, int> clone = ((IDictionary<string, int>)original).DeepClone();
+		clone["d"] = 4;
+
+		Assert.IsInstanceOfType<SortedDictionary<string, int>>(clone);
+		Assert.AreSequenceEqual(DescendingKeys, clone.Keys);
 	}
 }
