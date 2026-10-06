@@ -1,6 +1,8 @@
-## v2.4.3 (patch)
+## v2.4.4 (patch)
 
-Changes since v2.4.2:
+Changes since v2.4.3:
 
-- [patch] Keep the key comparer when cloning other dictionaries through IDictionary ([@Claude](https://github.com/Claude))
+- Justify the reflection that reads ReadOnlyDictionary's wrapped dictionary ([@Claude](https://github.com/Claude))
+- [patch] Keep the wrapped dictionary's comparer when cloning a ReadOnlyDictionary ([@Claude](https://github.com/Claude))
+- [patch] Let SortedList and the immutable dictionaries call DeepClone() directly ([@Claude](https://github.com/Claude))
 
