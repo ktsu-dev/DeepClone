@@ -482,29 +482,13 @@ Changes since v2.0.0:
 
 ## v2.0.0 (major)
 
-Changes since 1.0.0:
+Changes since v1.3.2-pre.7:
 
 - [major] Complete rewrite (matt-edmondson)
 - Refactor Get-VersionNotes function to improve commit message filtering by replacing pipeline usage with a foreach loop. This change enhances clarity and performance in handling version updates and skip conditions. (matt-edmondson)
 - Refine Get-BuildConfiguration function to ensure commit messages are processed as an array, improving the filtering of non-skip commits. This update enhances the accuracy of release eligibility checks by handling string outputs more effectively. (matt-edmondson)
 - Refactor Get-BuildConfiguration function to ensure proper array handling of commit messages. This change guarantees accurate filtering of non-skip commits by enforcing array treatment, enhancing the reliability of release eligibility checks. (matt-edmondson)
 - Enhance PSBuild module documentation and functions. Updated function descriptions for clarity, added examples, and improved parameter details across various functions. (matt-edmondson)
-- Remove Directory.Build.props and Directory.Build.targets files, delete unused scripts for managing metadata, changelog, license, and versioning. Add copyright headers to IDeepClonable.cs and TestCloneable.cs. (matt-edmondson)
-- Update project metadata and enhance documentation with detailed usage examples and API reference (matt-edmondson)
-- Add LICENSE template (matt-edmondson)
-- Apply new editorconfig (matt-edmondson)
-- Fix changelog script to handle prerelease version drops correctly (matt-edmondson)
-- Add mailmap (matt-edmondson)
-- Add scripts for automated metadata generation and versioning (matt-edmondson)
-- Renamed metadata files (matt-edmondson)
-- Replace LICENSE file with LICENSE.md and update copyright information (matt-edmondson)
-- Update test method names and replace LICENSE file (matt-edmondson)
-- Remove unnecessary PackageReference from DeepClone.Test project (matt-edmondson)
-- Update repository URL in README.md (matt-edmondson)
-- Add test project, update README, and remove .gitattributes (matt-edmondson)
-- Update VERSION (matt-edmondson)
-- Migrate ktsu.io to ktsu namespace (matt-edmondson)
-- Update VERSION (matt-edmondson)
 
 ## v1.3.2-pre.7 (prerelease)
 
@@ -873,13 +857,10 @@ Changes since v1.1.0:
 
 ## v1.1.0 (minor)
 
-Changes since 1.0.0:
+Changes since v1.0.18:
 
 - Update repository URL in README.md (matt-edmondson)
 - Add test project, update README, and remove .gitattributes (matt-edmondson)
-- Update VERSION (matt-edmondson)
-- Migrate ktsu.io to ktsu namespace (matt-edmondson)
-- Update VERSION (matt-edmondson)
 
 ## v1.0.18 (patch)
 
