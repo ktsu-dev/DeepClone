@@ -569,4 +569,36 @@ public static class DeepCloneContainerExtensions
 
 		return new(source.Reverse().Select(DeepClone));
 	}
+
+	/// <summary>
+	/// Deep clones a concurrent stack.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the stack.</typeparam>
+	/// <param name="source">The source stack to clone.</param>
+	/// <returns>A new concurrent stack containing deep clones of the original items in the same pop order if they
+	/// implement IDeepCloneable, otherwise containing the original items.</returns>
+	/// <remarks>
+	/// This method preserves the pop order of the stack. It clones from a single <see cref="ConcurrentStack{T}.ToArray"/>
+	/// snapshot, so the clone is a consistent copy even while other threads push or pop. Without this overload the call
+	/// bound to the <see cref="IEnumerable{T}"/> overload, and rebuilding a stack from that top-first sequence reversed
+	/// it (ktsu-dev/DeepClone#102).
+	///
+	/// Example usage:
+	/// <code>
+	/// var clonedStack = originalStack.DeepClone();
+	/// </code>
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Style",
+		"IDE0305:Simplify collection initialization",
+		Justification = "ConcurrentStack.ToArray takes one atomic snapshot; a spread enumerates while other threads push or pop (ktsu-dev/DeepClone#100).")]
+	public static ConcurrentStack<T> DeepClone<T>(this ConcurrentStack<T> source)
+	{
+		Ensure.NotNull(source);
+
+		T[] snapshot = source.ToArray();
+		Array.Reverse(snapshot);
+		return new(snapshot.Select(DeepClone));
+	}
 }
