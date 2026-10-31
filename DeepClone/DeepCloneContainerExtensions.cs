@@ -525,6 +525,79 @@ public static class DeepCloneContainerExtensions
 	}
 
 	/// <summary>
+	/// Deep clones a list.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the list.</typeparam>
+	/// <param name="source">The source list to clone.</param>
+	/// <returns>A new list containing deep clones of the original items in the same order if they implement IDeepCloneable,
+	/// otherwise containing the original items.</returns>
+	/// <remarks>
+	/// This method preserves the order of elements in the list. Without this overload the call bound to the <see cref="IEnumerable{T}"/> overload, which returns a read-only sequence that cannot be cast back to a <see cref="List{T}"/> (ktsu-dev/DeepClone#109).
+	///
+	/// Example usage:
+	/// <code>
+	/// var clonedList = originalList.DeepClone();
+	/// </code>
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Design",
+		"CA1002:Do not expose generic lists",
+		Justification = "The overload exists to return the same concrete type it is called on, so a cloned List<T> property can be assigned without a cast (ktsu-dev/DeepClone#109).")]
+	public static List<T> DeepClone<T>(this List<T> source)
+	{
+		Ensure.NotNull(source);
+
+		return [.. source.Select(DeepClone)];
+	}
+
+	/// <summary>
+	/// Deep clones a queue.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the queue.</typeparam>
+	/// <param name="source">The source queue to clone.</param>
+	/// <returns>A new queue containing deep clones of the original items in the same order if they implement IDeepCloneable,
+	/// otherwise containing the original items.</returns>
+	/// <remarks>
+	/// This method preserves the order of elements in the queue, so the clone dequeues in the same order. Without this overload the call bound to the <see cref="IEnumerable{T}"/> overload, which returns a read-only sequence that cannot be cast back to a <see cref="Queue{T}"/> (ktsu-dev/DeepClone#109).
+	///
+	/// Example usage:
+	/// <code>
+	/// var clonedQueue = originalQueue.DeepClone();
+	/// </code>
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static Queue<T> DeepClone<T>(this Queue<T> source)
+	{
+		Ensure.NotNull(source);
+
+		return new(source.Select(DeepClone));
+	}
+
+	/// <summary>
+	/// Deep clones a linked list.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the list.</typeparam>
+	/// <param name="source">The source linked list to clone.</param>
+	/// <returns>A new linked list containing deep clones of the original items in the same order if they implement IDeepCloneable,
+	/// otherwise containing the original items.</returns>
+	/// <remarks>
+	/// This method preserves the order of nodes in the linked list. Without this overload the call bound to the <see cref="IEnumerable{T}"/> overload, which returns a read-only sequence that cannot be cast back to a <see cref="LinkedList{T}"/> (ktsu-dev/DeepClone#109).
+	///
+	/// Example usage:
+	/// <code>
+	/// var clonedLinkedList = originalLinkedList.DeepClone();
+	/// </code>
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static LinkedList<T> DeepClone<T>(this LinkedList<T> source)
+	{
+		Ensure.NotNull(source);
+
+		return new(source.Select(DeepClone));
+	}
+
+	/// <summary>
 	/// Deep clones a sorted set.
 	/// </summary>
 	/// <typeparam name="T">The type of objects in the set.</typeparam>
