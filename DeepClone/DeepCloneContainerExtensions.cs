@@ -197,6 +197,7 @@ public static class DeepCloneContainerExtensions
 #else
 		while (dest.TryDequeue(out _))
 		{
+			// Intentionally empty: netstandard2.0 has no ConcurrentQueue.Clear, so drain it instead.
 		}
 #endif
 		foreach (T item in items)
