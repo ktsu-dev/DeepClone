@@ -625,6 +625,8 @@ Convenience methods for cloning elements directly into an existing collection.
 | `DeepCloneFrom<T>` | `ICollection<T>` | Clones all elements from source collection into the target collection |
 | `DeepCloneFrom<TKey, TValue>` | `IDictionary<TKey, TValue>` | Clones all key-value pairs from source dictionary into the target dictionary |
 | `DeepCloneFrom<T>` | `ISet<T>` | Clones all elements from source set into the target set |
+| `DeepCloneFrom<T>` | `Stack<T>`, `ConcurrentStack<T>` | Clones all elements into the target stack, so it pops in the same order as the source |
+| `DeepCloneFrom<T>` | `Queue<T>`, `ConcurrentQueue<T>` | Clones all elements into the target queue, so it dequeues in the same order as the source |
 
 Usage Example:
 

@@ -91,6 +91,121 @@ public static class DeepCloneContainerExtensions
 	}
 
 	/// <summary>
+	/// Deep clones items from a source sequence into a destination stack, so the destination pops in the same order as the source.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the collections.</typeparam>
+	/// <param name="dest">The destination stack to clone into.</param>
+	/// <param name="source">The source to clone from, enumerated top first as a <see cref="Stack{T}"/> enumerates.</param>
+	/// <remarks>
+	/// <see cref="Stack{T}"/> does not implement <see cref="ICollection{T}"/>, so a get-only stack property can't use
+	/// <see cref="DeepCloneFrom{T}(ICollection{T}, IEnumerable{T})"/>. The source is snapshotted first, so
+	/// <c>stack.DeepCloneFrom(stack)</c> leaves the stack unchanged, then pushed in reverse so the top stays on top.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
+	public static void DeepCloneFrom<T>(this Stack<T> dest, IEnumerable<T> source)
+	{
+		Ensure.NotNull(dest);
+
+		Ensure.NotNull(source);
+
+		T[] items = [.. source];
+		dest.Clear();
+		for (int i = items.Length - 1; i >= 0; i--)
+		{
+			dest.Push(DeepClone(items[i]));
+		}
+	}
+
+	/// <summary>
+	/// Deep clones items from a source sequence into a destination queue, preserving dequeue order.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the collections.</typeparam>
+	/// <param name="dest">The destination queue to clone into.</param>
+	/// <param name="source">The source to clone from, enumerated front first.</param>
+	/// <remarks>
+	/// <see cref="Queue{T}"/> does not implement <see cref="ICollection{T}"/>, so a get-only queue property can't use
+	/// <see cref="DeepCloneFrom{T}(ICollection{T}, IEnumerable{T})"/>. The source is snapshotted first, so
+	/// <c>queue.DeepCloneFrom(queue)</c> leaves the queue unchanged.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
+	public static void DeepCloneFrom<T>(this Queue<T> dest, IEnumerable<T> source)
+	{
+		Ensure.NotNull(dest);
+
+		Ensure.NotNull(source);
+
+		T[] items = [.. source];
+		dest.Clear();
+		foreach (T item in items)
+		{
+			dest.Enqueue(DeepClone(item));
+		}
+	}
+
+	/// <summary>
+	/// Deep clones items from a source sequence into a destination concurrent stack, so the destination pops in the same order as the source.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the collections.</typeparam>
+	/// <param name="dest">The destination stack to clone into.</param>
+	/// <param name="source">The source to clone from, enumerated top first as a <see cref="ConcurrentStack{T}"/> enumerates.</param>
+	/// <remarks>
+	/// The source is snapshotted first, so <c>stack.DeepCloneFrom(stack)</c> leaves the stack unchanged. The clear and refill
+	/// are not one atomic operation: another thread writing to <paramref name="dest"/> meanwhile may see it part-filled.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
+	public static void DeepCloneFrom<T>(this ConcurrentStack<T> dest, IEnumerable<T> source)
+	{
+		Ensure.NotNull(dest);
+
+		Ensure.NotNull(source);
+
+		T[] items = [.. source];
+		T[] clones = new T[items.Length];
+		for (int i = 0; i < items.Length; i++)
+		{
+			// PushRange pushes its first element first, so the last source item goes in first and the top stays on top.
+			clones[items.Length - 1 - i] = DeepClone(items[i]);
+		}
+
+		dest.Clear();
+		if (clones.Length > 0)
+		{
+			dest.PushRange(clones);
+		}
+	}
+
+	/// <summary>
+	/// Deep clones items from a source sequence into a destination concurrent queue, preserving dequeue order.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the collections.</typeparam>
+	/// <param name="dest">The destination queue to clone into.</param>
+	/// <param name="source">The source to clone from, enumerated front first.</param>
+	/// <remarks>
+	/// The source is snapshotted first, so <c>queue.DeepCloneFrom(queue)</c> leaves the queue unchanged. The clear and refill
+	/// are not one atomic operation: another thread writing to <paramref name="dest"/> meanwhile may see it part-filled.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
+	public static void DeepCloneFrom<T>(this ConcurrentQueue<T> dest, IEnumerable<T> source)
+	{
+		Ensure.NotNull(dest);
+
+		Ensure.NotNull(source);
+
+		T[] items = [.. source];
+#if NETSTANDARD2_1 || NET
+		dest.Clear();
+#else
+		while (dest.TryDequeue(out _))
+		{
+		}
+#endif
+		foreach (T item in items)
+		{
+			dest.Enqueue(DeepClone(item));
+		}
+	}
+
+	/// <summary>
 	/// Helper method to deep clone an object if it implements IDeepCloneable, otherwise returns the object unchanged.
 	/// </summary>
 	/// <typeparam name="T">The type of object to clone.</typeparam>
