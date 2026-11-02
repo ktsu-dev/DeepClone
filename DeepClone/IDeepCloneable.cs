@@ -32,9 +32,16 @@ public interface IDeepCloneable
 	/// </summary>
 	/// <returns>A new instance that is a deep clone of the current instance.</returns>
 	/// <remarks>
-	/// This non-generic method should typically delegate to a generic implementation.
-	/// For example: <c>public object DeepClone() => DeepClone();</c> where the other
-	/// DeepClone() method is the strongly-typed version.
+	/// This non-generic method should typically delegate to a strongly-typed implementation.
+	/// Implement it explicitly, so it does not clash with the strongly-typed method and
+	/// does not call itself:
+	/// <code>
+	/// public Foo DeepClone() => new() { Value = Value };
+	/// object IDeepCloneable.DeepClone() => DeepClone();
+	/// </code>
+	/// A public <c>object DeepClone()</c> cannot sit beside <c>Foo DeepClone()</c> (CS0111),
+	/// and <c>public object DeepClone() => DeepClone();</c> on its own calls itself until
+	/// the stack overflows.
 	/// </remarks>
 	public object DeepClone();
 }
