@@ -182,7 +182,9 @@ This ensures complete type safety throughout the inheritance chain.
 
 ### Inheritance and Deep Cloning
 
-When implementing deep cloning in a class hierarchy, it's critical to call `base.DeepClone()` first in derived classes:
+When implementing deep cloning in a class hierarchy, it's critical to call `base.DeepClone()` first in derived classes.
+
+Any class that will be subclassed must stay generic and abstract, passing the CRTP parameter on to its own subclasses. Only the classes at the bottom of the hierarchy close it with their own type:
 
 ```csharp
 // Base class
@@ -191,69 +193,75 @@ public abstract class Shape<T> : DeepCloneable<T> where T : Shape<T>
     public int Id { get; set; }
     public string? Name { get; set; }
     public List<string> Tags { get; set; } = new();
-    
+
     protected override void DeepClone(T clone)
     {
         ArgumentNullException.ThrowIfNull(clone);
-        
+
         // Clone base class properties
         clone.Id = Id;
         clone.Name = Name;
-        
+
         // Use DeepCloneFrom for collections
         clone.Tags.DeepCloneFrom(Tags);
     }
 }
 
-// Derived class
-public class Circle : Shape<Circle>
+// Intermediate class: still generic and abstract, so it can be subclassed
+public abstract class Circle<T> : Shape<T> where T : Circle<T>
 {
     public double Radius { get; set; }
     public Dictionary<string, double> Measurements { get; set; } = new();
-    
-    protected override Circle CreateInstance() => new Circle();
-    
-    protected override void DeepClone(Circle clone)
+
+    protected override void DeepClone(T clone)
     {
         // IMPORTANT: Always call base.DeepClone first to clone base properties
         base.DeepClone(clone);
-        
+
         // Then clone properties specific to this type
         clone.Radius = Radius;
-        
+
         // Use DeepCloneFrom for collections
         clone.Measurements.DeepCloneFrom(Measurements);
     }
 }
 
-// Further derived class
-public class ColoredCircle : Circle
+// Concrete classes close the CRTP parameter with their own type
+public class Circle : Circle<Circle>
+{
+    protected override Circle CreateInstance() => new Circle();
+}
+
+public class ColoredCircle : Circle<ColoredCircle>
 {
     public string? Color { get; set; }
     public HashSet<string> ColorGradients { get; set; } = new();
-    
+
     protected override ColoredCircle CreateInstance() => new ColoredCircle();
-    
+
     protected override void DeepClone(ColoredCircle clone)
     {
         // Call base first to handle Circle and Shape properties
         base.DeepClone(clone);
-        
+
         // Then clone ColoredCircle specific properties
         clone.Color = Color;
-        
+
         // Use DeepCloneFrom for collections
         clone.ColorGradients.DeepCloneFrom(ColorGradients);
     }
 }
 ```
 
-Note that each derived class's `DeepClone()` method receives a parameter of its own type:
-- `Shape<T>.DeepClone(T clone)` receives a `T`
-- `Circle.DeepClone(Circle clone)` receives a `Circle`
+Because every level passes `T` along, each `DeepClone(T clone)` override receives the concrete type being cloned, and `DeepClone()` returns it, so no casting is needed:
+- `Shape<T>.DeepClone(T clone)` and `Circle<T>.DeepClone(T clone)` receive a `ColoredCircle` when a `ColoredCircle` is cloned
 - `ColoredCircle.DeepClone(ColoredCircle clone)` receives a `ColoredCircle`
+- `ColoredCircle.DeepClone()` returns a `ColoredCircle`
 
-This is achieved through the CRTP pattern and means that no casting is needed in any of these methods.
+Don't derive from a class that has already closed the parameter, such as `class ColoredCircle : Circle` where `Circle : Shape<Circle>`. `TDerived` is then fixed at `Circle`, so:
+- `protected override void DeepClone(ColoredCircle clone)` doesn't compile (CS0115). The only method there is to override is `DeepClone(Circle clone)`, and it has to cast its argument.
+- `DeepClone()` returns `Circle`, so callers have to cast the clone too.
+- Unless `ColoredCircle` also overrides `CreateInstance()`, the clone is a plain `Circle` and every `ColoredCircle` property is silently dropped. That override needs a covariant return type, which runtimes before .NET 5 (including .NET Framework) reject.
 
 Usage:
 
@@ -269,7 +277,7 @@ var original = new ColoredCircle
     ColorGradients = { "lightblue", "darkblue" }
 };
 
-var clone = original.DeepClone();
+ColoredCircle clone = original.DeepClone();
 
 // All properties from the entire hierarchy are cloned
 Console.WriteLine(clone.Id);      // 1
