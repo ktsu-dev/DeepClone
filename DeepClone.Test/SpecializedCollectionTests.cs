@@ -423,6 +423,94 @@ public class SpecializedCollectionTests
 		inner["Other"] = new SimpleObject { Id = 2, Name = "Item2" };
 		Assert.HasCount(1, clone);
 	}
+
+	/// <summary>
+	/// Tests that a list clones to a list with the same order and deep-cloned elements (ktsu-dev/DeepClone#109).
+	/// </summary>
+	[TestMethod]
+	public void List_DeepClone_ReturnsListInOrderWithClonedElements()
+	{
+		List<SimpleObject> original = [new SimpleObject { Id = 1, Name = "A" }, new SimpleObject { Id = 2, Name = "B" }];
+
+		object result = original.DeepClone();
+
+		Assert.IsInstanceOfType<List<SimpleObject>>(result);
+		AssertOrderedClones(original, (List<SimpleObject>)result);
+	}
+
+	/// <summary>
+	/// Tests that a queue clones to a queue that dequeues in the same order, with deep-cloned elements (ktsu-dev/DeepClone#109).
+	/// </summary>
+	[TestMethod]
+	public void Queue_DeepClone_ReturnsQueueInOrderWithClonedElements()
+	{
+		Queue<SimpleObject> original = new();
+		original.Enqueue(new SimpleObject { Id = 1, Name = "First" });
+		original.Enqueue(new SimpleObject { Id = 2, Name = "Second" });
+		original.Enqueue(new SimpleObject { Id = 3, Name = "Third" });
+
+		object result = original.DeepClone();
+
+		Assert.IsInstanceOfType<Queue<SimpleObject>>(result);
+		Queue<SimpleObject> clone = (Queue<SimpleObject>)result;
+		AssertOrderedClones(original, clone);
+		Assert.AreEqual(1, clone.Dequeue().Id);
+		Assert.HasCount(3, original);
+	}
+
+	/// <summary>
+	/// Tests that a linked list clones to a linked list with the same node order and deep-cloned elements (ktsu-dev/DeepClone#109).
+	/// </summary>
+	[TestMethod]
+	public void LinkedList_DeepClone_ReturnsLinkedListInOrderWithClonedElements()
+	{
+		LinkedList<SimpleObject> original = new();
+		original.AddLast(new SimpleObject { Id = 1, Name = "Head" });
+		original.AddLast(new SimpleObject { Id = 2, Name = "Tail" });
+
+		object result = original.DeepClone();
+
+		Assert.IsInstanceOfType<LinkedList<SimpleObject>>(result);
+		LinkedList<SimpleObject> clone = (LinkedList<SimpleObject>)result;
+		AssertOrderedClones(original, clone);
+		Assert.AreEqual(1, clone.First!.Value.Id);
+		Assert.AreEqual(2, clone.Last!.Value.Id);
+	}
+
+	/// <summary>
+	/// Tests that the typed overloads are chosen for a variable of each concrete type, without a cast or ambiguity.
+	/// </summary>
+	[TestMethod]
+	public void ConcreteCollections_DeepClone_BindToTypedOverloads()
+	{
+		List<int> list = [1, 2];
+		Queue<int> queue = new([1, 2]);
+		LinkedList<int> linkedList = new([1, 2]);
+
+		List<int> listClone = list.DeepClone();
+		Queue<int> queueClone = queue.DeepClone();
+		LinkedList<int> linkedListClone = linkedList.DeepClone();
+
+		Assert.AreSequenceEqual(list, listClone);
+		Assert.AreSequenceEqual(queue, queueClone);
+		Assert.AreSequenceEqual(linkedList, linkedListClone);
+		Assert.AreNotSame(list, listClone);
+		Assert.AreNotSame(queue, queueClone);
+		Assert.AreNotSame(linkedList, linkedListClone);
+	}
+
+	private static void AssertOrderedClones(IEnumerable<SimpleObject> original, IEnumerable<SimpleObject> clone)
+	{
+		SimpleObject[] originalItems = [.. original];
+		SimpleObject[] cloneItems = [.. clone];
+		Assert.HasCount(originalItems.Length, cloneItems);
+		for (int i = 0; i < originalItems.Length; i++)
+		{
+			Assert.AreNotSame(originalItems[i], cloneItems[i]);
+			Assert.AreEqual(originalItems[i].Id, cloneItems[i].Id);
+			Assert.AreEqual(originalItems[i].Name, cloneItems[i].Name);
+		}
+	}
 }
 
 #pragma warning restore IDE0007
