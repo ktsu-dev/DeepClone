@@ -2,99 +2,69 @@
 <!-- https://learn.microsoft.com/dotnet/fundamentals/package-validation/diagnostic-ids -->
 <Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:System.Runtime.CompilerServices.RequiresLocationAttribute</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>M:System.Diagnostics.CodeAnalysis.ExperimentalAttribute.get_UrlFormat:[T:System.Runtime.CompilerServices.CompilerGeneratedAttribute]</Target>
+    <Left>lib/net8.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net9.0/ktsu.DeepClone.dll</Right>
   </Suppression>
   <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:System.Runtime.CompilerServices.IsExternalInit</Target>
-    <Left>lib/netstandard2.1/ktsu.DeepClone.dll</Left>
-    <Right>lib/net5.0/ktsu.DeepClone.dll</Right>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>M:System.Diagnostics.CodeAnalysis.ExperimentalAttribute.set_UrlFormat(System.String):[T:System.Runtime.CompilerServices.CompilerGeneratedAttribute]</Target>
+    <Left>lib/net8.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net9.0/ktsu.DeepClone.dll</Right>
   </Suppression>
   <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>M:ktsu.DeepClone.DeepCloneContainerExtensions.DeepClone``1(System.Collections.Generic.HashSet{``0})&lt;0&gt;:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>M:System.Diagnostics.CodeAnalysis.ExperimentalAttribute.get_UrlFormat:[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net10.0/ktsu.DeepClone.dll</Right>
   </Suppression>
   <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>M:ktsu.DeepClone.DeepCloneContainerExtensions.DeepClone``1(System.Collections.Generic.IEnumerable{``0})&lt;0&gt;:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>M:System.Diagnostics.CodeAnalysis.ExperimentalAttribute.set_UrlFormat(System.String):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net10.0/ktsu.DeepClone.dll</Right>
   </Suppression>
   <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>M:ktsu.DeepClone.DeepCloneContainerExtensions.DeepClone``1(System.Collections.Generic.SortedSet{``0})&lt;0&gt;:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.#ctor(System.Int32,System.Int32,System.IFormatProvider,System.Span{System.Char}):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net10.0/ktsu.DeepClone.dll</Right>
   </Suppression>
   <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>M:ktsu.DeepClone.DeepCloneContainerExtensions.DeepClone``1(System.Collections.Generic.Stack{``0})&lt;0&gt;:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.AppendFormatted(System.ReadOnlySpan{System.Char},System.Int32,System.String):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net10.0/ktsu.DeepClone.dll</Right>
   </Suppression>
   <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>M:ktsu.DeepClone.DeepCloneContainerExtensions.DeepClone``2(System.Collections.Generic.IDictionary{``0,``1})&lt;1&gt;:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.AppendFormatted(System.ReadOnlySpan{System.Char}):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net10.0/ktsu.DeepClone.dll</Right>
   </Suppression>
   <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>M:ktsu.DeepClone.DeepCloneContainerExtensions.DeepClone``2(System.Collections.Generic.IReadOnlyDictionary{``0,``1})&lt;1&gt;:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>P:System.Diagnostics.CodeAnalysis.ExperimentalAttribute.UrlFormat:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
+    <Left>lib/net9.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net10.0/ktsu.DeepClone.dll</Right>
   </Suppression>
   <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>M:ktsu.DeepClone.DeepCloneContainerExtensions.DeepCloneFrom``1(System.Collections.Generic.ICollection{``0},System.Collections.Generic.IEnumerable{``0})&lt;0&gt;:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>T:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
+    <Left>lib/net9.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net10.0/ktsu.DeepClone.dll</Right>
   </Suppression>
   <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>M:ktsu.DeepClone.DeepCloneContainerExtensions.DeepCloneFrom``2(System.Collections.Generic.IDictionary{``0,``1},System.Collections.Generic.IDictionary{``0,``1})&lt;1&gt;:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>T:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler:[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net10.0/ktsu.DeepClone.dll</Right>
   </Suppression>
   <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>T:ktsu.DeepClone.DeepCloneable`1:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>T:ktsu.DeepClone.DeepCloneable`1:[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>T:ktsu.DeepClone.DeepCloneable`1&lt;0&gt;:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>T:ktsu.DeepClone.DeepCloneContainerExtensions:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>T:ktsu.DeepClone.DeepCloneContainerExtensions:[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0016</DiagnosticId>
-    <Target>T:ktsu.DeepClone.IDeepCloneable:[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
-    <Left>lib/net7.0/ktsu.DeepClone.dll</Left>
-    <Right>lib/net8.0/ktsu.DeepClone.dll</Right>
+    <DiagnosticId>CP0015</DiagnosticId>
+    <Target>T:System.Diagnostics.CodeAnalysis.ExperimentalAttribute:[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.DeepClone.dll</Left>
+    <Right>lib/net10.0/ktsu.DeepClone.dll</Right>
   </Suppression>
 </Suppressions>
