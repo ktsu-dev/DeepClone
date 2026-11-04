@@ -2,6 +2,7 @@
 
 Changes since v2.4.0:
 
+- Clone every item before clearing a Stack, Queue or ConcurrentQueue in DeepCloneFrom [patch] (Claude)
 - Share only immutable data in the README performance example [patch] (#123) (matt-edmondson)
 - Make the README inheritance sample compile and stay generic down the hierarchy [patch] (#122) (matt-edmondson)
 - Show the explicit interface implementation in IDeepCloneable's remarks [patch] (#121) (matt-edmondson)
