@@ -147,11 +147,11 @@ public static class DeepCloneContainerExtensions
 
 		Ensure.NotNull(source);
 
-		T[] items = [.. source];
+		T[] clones = CloneAll(source);
 		dest.Clear();
-		for (int i = items.Length - 1; i >= 0; i--)
+		for (int i = clones.Length - 1; i >= 0; i--)
 		{
-			dest.Push(DeepClone(items[i]));
+			dest.Push(clones[i]);
 		}
 	}
 
@@ -173,11 +173,11 @@ public static class DeepCloneContainerExtensions
 
 		Ensure.NotNull(source);
 
-		T[] items = [.. source];
+		T[] clones = CloneAll(source);
 		dest.Clear();
-		foreach (T item in items)
+		foreach (T clone in clones)
 		{
-			dest.Enqueue(DeepClone(item));
+			dest.Enqueue(clone);
 		}
 	}
 
@@ -230,7 +230,7 @@ public static class DeepCloneContainerExtensions
 
 		Ensure.NotNull(source);
 
-		T[] items = [.. source];
+		T[] clones = CloneAll(source);
 #if NETSTANDARD2_1 || NET
 		dest.Clear();
 #else
@@ -239,10 +239,26 @@ public static class DeepCloneContainerExtensions
 			// Intentionally empty: netstandard2.0 has no ConcurrentQueue.Clear, so drain it instead.
 		}
 #endif
-		foreach (T item in items)
+		foreach (T clone in clones)
 		{
-			dest.Enqueue(DeepClone(item));
+			dest.Enqueue(clone);
 		}
+	}
+
+	/// <summary>
+	/// Snapshots <paramref name="source"/> and deep clones every item, in order, before any destination is touched,
+	/// so an item whose clone throws leaves the destination unchanged (ktsu-dev/DeepClone#90, #124).
+	/// </summary>
+	private static T[] CloneAll<T>(IEnumerable<T> source)
+	{
+		T[] items = [.. source];
+		T[] clones = new T[items.Length];
+		for (int i = 0; i < items.Length; i++)
+		{
+			clones[i] = DeepClone(items[i]);
+		}
+
+		return clones;
 	}
 
 	/// <summary>
