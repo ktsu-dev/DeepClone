@@ -696,47 +696,47 @@ When implementing deep cloning, follow these guidelines:
 
 Deep cloning can be a resource-intensive operation, especially for complex object graphs. Here are some tips to optimize performance:
 
-1. **Lazy Clone When Possible**: If a property is expensive to clone and rarely modified, consider implementing lazy cloning.
+1. **Share Immutable Data Instead of Cloning It**: An object that cannot change after construction (read-only members holding only immutable data) can be assigned to the clone by reference. Nothing can be edited through it, so the clones stay independent.
 2. **Avoid Excessive Nesting**: Highly nested object structures with many references are more expensive to clone.
-3. **Consider Caching**: For frequently cloned immutable objects, consider caching the cloned instances.
+3. **Never Share or Cache Clones of Mutable Data**: Handing one cached clone to several clones makes them all share it, so an edit through one shows up in the others, and the cache goes stale when the original is edited in place. Each clone needs its own `DeepClone()` of anything mutable.
 4. **Use ValueType Collections Wisely**: Collections of value types don't need full deep cloning.
 5. **Benchmark Critical Paths**: If deep cloning is on a performance-critical path, benchmark different approaches.
 
-Example of optimized cloning for a large object:
+Example of skipping the clone of an expensive resource by making it immutable:
 
 ```csharp
+// Immutable: every member is read-only and holds only immutable data,
+// so one instance can be shared by the original and all of its clones
+public sealed class LookupTable
+{
+    public LookupTable(IEnumerable<int> values) => Values = [.. values];
+
+    public ImmutableArray<int> Values { get; }
+}
+
 public class OptimizedObject : DeepCloneable<OptimizedObject>
 {
-    // Expensive to clone, but rarely modified
-    private ExpensiveResource? _resource;
-    private ExpensiveResource? _clonedResource;
-    
-    public ExpensiveResource? Resource 
-    { 
-        get => _resource;
-        set 
-        {
-            _resource = value;
-            _clonedResource = null; // Invalidate cached clone
-        }
-    }
+    // Expensive to build, but immutable: shared, not cloned
+    public LookupTable? Table { get; set; }
+
+    // Mutable: every clone gets its own copy
+    public List<int> Scratch { get; set; } = new();
 
     protected override OptimizedObject CreateInstance() => new OptimizedObject();
-    
+
     protected override void DeepClone(OptimizedObject clone)
     {
         ArgumentNullException.ThrowIfNull(clone);
-        
-        // Lazy clone the expensive resource only when needed
-        if (_resource != null)
-        {
-            // Cache the cloned resource to avoid redundant deep cloning
-            _clonedResource ??= _resource.DeepClone();
-            clone._resource = _clonedResource;
-        }
+
+        // Safe to share only because LookupTable is immutable
+        clone.Table = Table;
+
+        clone.Scratch.DeepCloneFrom(Scratch);
     }
 }
 ```
+
+Replacing `Table` on a clone doesn't affect the original or the other clones. To change a shared table, build a new `LookupTable`. If the resource has to stay mutable, clone it in every `DeepClone` call.
 
 ## Troubleshooting Common Issues
 
