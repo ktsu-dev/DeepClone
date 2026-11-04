@@ -1,7 +1,21 @@
-## v2.4.5-pre.4 (prerelease)
+## v2.5.0 (minor)
 
-Changes since v2.4.5-pre.3:
+Changes since v2.4.0:
 
-- Bump MSTest.Sdk from 4.5.1 to 4.5.2 (dependabot[bot])
-- Bump Polyfill from 11.4.4 to 11.4.5 (dependabot[bot])
+- Share only immutable data in the README performance example [patch] (#123) (matt-edmondson)
+- Make the README inheritance sample compile and stay generic down the hierarchy [patch] (#122) (matt-edmondson)
+- Show the explicit interface implementation in IDeepCloneable's remarks [patch] (#121) (matt-edmondson)
+- Regenerate CompatibilitySuppressions.xml after the Polyfill 11.4.5 bump [patch] (#119) (matt-edmondson)
+- Add DeepCloneFrom for Stack, Queue, ConcurrentStack and ConcurrentQueue [minor] (#115) (matt-edmondson)
+- Add List, Queue and LinkedList DeepClone overloads that return their own type (#113) (matt-edmondson)
+- Add a ConcurrentStack DeepClone overload that keeps pop order (#112) (matt-edmondson)
+- Leave the destination unchanged when DeepCloneFrom throws (#111) (matt-edmondson)
+- Justify the reflection that reads ReadOnlyDictionary's wrapped dictionary (Claude)
+- [patch] Keep the wrapped dictionary's comparer when cloning a ReadOnlyDictionary (Claude)
+- [patch] Let SortedList and the immutable dictionaries call DeepClone() directly (Claude)
+- [patch] Keep the key comparer when cloning other dictionaries through IDictionary (Claude)
+- Move CI onto the shared ci-shared.yml pipeline (Claude)
+- Clone key-value pairs through a nested cloner type instead of private reflection [patch] (Claude)
+- Clone elements with a switch instead of a nested ternary [patch] (Claude)
+- Deep clone the key and value of a KeyValuePair element [patch] (Claude)
 
