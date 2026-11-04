@@ -349,7 +349,7 @@ public static class DeepCloneContainerExtensions
 	/// This method returns a new dictionary with cloned key-value pairs. Both keys and values
 	/// are deep cloned if they implement IDeepCloneable. The source's key comparer is kept when the runtime
 	/// type exposes one: <see cref="Dictionary{TKey, TValue}"/>, <see cref="SortedDictionary{TKey, TValue}"/>,
-	/// <see cref="SortedList{TKey, TValue}"/>, <see cref="ConcurrentDictionary{TKey, TValue}"/> (.NET 6 and later),
+	/// <see cref="SortedList{TKey, TValue}"/>, <see cref="ConcurrentDictionary{TKey, TValue}"/> (where the runtime exposes its comparer, as .NET 6 and later do),
 	/// and, on .NET, <c>ImmutableDictionary</c> and <c>ImmutableSortedDictionary</c>. A sorted source stays sorted,
 	/// a sorted list or concurrent dictionary is cloned as the same type, and an immutable source is cloned as the
 	/// mutable dictionary of the same kind. A <see cref="ReadOnlyDictionary{TKey, TValue}"/> is cloned according to the
@@ -503,8 +503,9 @@ public static class DeepCloneContainerExtensions
 	/// <remarks>
 	/// <see cref="ConcurrentDictionary{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/> and
 	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
-	/// <c>concurrentDictionary.DeepClone()</c> compile without a cast. The comparer is kept on .NET 6 and later;
-	/// the .NET Standard builds cannot read it, so the clone uses the default comparer there.
+	/// <c>concurrentDictionary.DeepClone()</c> compile without a cast. The comparer is kept wherever the runtime exposes
+	/// it, which .NET 6 and later do, including through the .NET Standard builds; on older runtimes the clone uses the
+	/// default comparer.
 	/// </remarks>
 	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
 	public static ConcurrentDictionary<TKey, TValue> DeepClone<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> source)
@@ -513,11 +514,7 @@ public static class DeepCloneContainerExtensions
 		Ensure.NotNull(source);
 
 		IEnumerable<KeyValuePair<TKey, TValue>> pairs = source.Select(p => new KeyValuePair<TKey, TValue>(DeepClone(p.Key), DeepClone(p.Value)));
-#if NET6_0_OR_GREATER
-		return new(pairs, source.Comparer);
-#else
-		return new(pairs);
-#endif
+		return new(pairs, ConcurrentComparer<TKey, TValue>.Of(source));
 	}
 
 	/// <summary>
@@ -557,7 +554,7 @@ public static class DeepCloneContainerExtensions
 	/// <see cref="IDictionary{TKey, TValue}"/> overload, a sorted source stays sorted and the source's key comparer
 	/// is kept when the runtime type exposes one: <see cref="Dictionary{TKey, TValue}"/>,
 	/// <see cref="SortedDictionary{TKey, TValue}"/>, <see cref="SortedList{TKey, TValue}"/>,
-	/// <see cref="ConcurrentDictionary{TKey, TValue}"/> (.NET 6 and later), and, on .NET, <c>ImmutableDictionary</c>
+	/// <see cref="ConcurrentDictionary{TKey, TValue}"/> (where the runtime exposes its comparer, as .NET 6 and later do), and, on .NET, <c>ImmutableDictionary</c>
 	/// and <c>ImmutableSortedDictionary</c>.
 	///
 	/// Example usage:
@@ -599,9 +596,7 @@ public static class DeepCloneContainerExtensions
 			SortedDictionary<TKey, TValue> sorted => new SortedDictionary<TKey, TValue>(sorted.Comparer),
 			Dictionary<TKey, TValue> dictionary => new Dictionary<TKey, TValue>(dictionary.Count, dictionary.Comparer),
 			SortedList<TKey, TValue> sortedList => new SortedList<TKey, TValue>(sortedList.Count, sortedList.Comparer),
-#if NET6_0_OR_GREATER
-			ConcurrentDictionary<TKey, TValue> concurrent => new ConcurrentDictionary<TKey, TValue>(concurrent.Comparer),
-#endif
+			ConcurrentDictionary<TKey, TValue> concurrent => new ConcurrentDictionary<TKey, TValue>(ConcurrentComparer<TKey, TValue>.Of(concurrent)),
 #if NET
 			// The immutable types cannot be filled in place, so the clone is the mutable type with the same lookup.
 			ImmutableSortedDictionary<TKey, TValue> immutableSorted => new SortedDictionary<TKey, TValue>(immutableSorted.KeyComparer),
@@ -638,6 +633,40 @@ public static class DeepCloneContainerExtensions
 		/// <param name="readOnly">The read-only wrapper.</param>
 		/// <returns>The wrapped dictionary.</returns>
 		internal static IDictionary<TKey, TValue> Of(ReadOnlyDictionary<TKey, TValue> readOnly) => Getter(readOnly);
+	}
+
+	/// <summary>
+	/// Reads the key comparer of a <see cref="ConcurrentDictionary{TKey, TValue}"/>. Its <c>Comparer</c> property
+	/// exists only from .NET 6, so the .NET Standard builds look it up at run time: a .NET 6 or later app that restores
+	/// one of them still keeps the comparer, and only a runtime without the property falls back to the default.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	private static class ConcurrentComparer<TKey, TValue>
+		where TKey : notnull
+	{
+#if NET
+		/// <summary>
+		/// Gets the key comparer of <paramref name="source"/>.
+		/// </summary>
+		/// <param name="source">The concurrent dictionary.</param>
+		/// <returns>The dictionary's key comparer.</returns>
+		internal static IEqualityComparer<TKey> Of(ConcurrentDictionary<TKey, TValue> source) => source.Comparer;
+#else
+		private static readonly Func<ConcurrentDictionary<TKey, TValue>, IEqualityComparer<TKey>>? Getter =
+			typeof(ConcurrentDictionary<TKey, TValue>)
+				.GetProperty("Comparer", BindingFlags.Instance | BindingFlags.Public, null, typeof(IEqualityComparer<TKey>), Type.EmptyTypes, null)?
+				.GetGetMethod()?
+				.CreateDelegate<Func<ConcurrentDictionary<TKey, TValue>, IEqualityComparer<TKey>>>();
+
+		/// <summary>
+		/// Gets the key comparer of <paramref name="source"/>, or the default comparer when the runtime does not expose it.
+		/// </summary>
+		/// <param name="source">The concurrent dictionary.</param>
+		/// <returns>The dictionary's key comparer, or <see cref="EqualityComparer{T}.Default"/>.</returns>
+		internal static IEqualityComparer<TKey> Of(ConcurrentDictionary<TKey, TValue> source) =>
+			Getter?.Invoke(source) ?? EqualityComparer<TKey>.Default;
+#endif
 	}
 
 	/// <summary>
