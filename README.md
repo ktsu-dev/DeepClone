@@ -607,6 +607,7 @@ Extension methods for deep cloning various container types.
 | `DeepClone<T>` | `HashSet<T?>?` | Creates a deep clone of a hash set, preserving the comparer |
 | `DeepClone<T>` | `SortedSet<T?>?` | Creates a deep clone of a sorted set, preserving the comparer |
 | `DeepClone<T>` | `Stack<T?>?` | Creates a deep clone of a stack, preserving the element order |
+| `DeepClone<T>` | `ConcurrentStack<T>` | Creates a deep clone of a concurrent stack from one consistent snapshot, preserving the pop order |
 | `DeepClone<T>` | `ImmutableArray<T>` | Creates a deep clone of an immutable array |
 | `DeepClone<T>` | `ImmutableList<T>` | Creates a deep clone of an immutable list |
 | `DeepClone<TKey, TValue>` | `ImmutableDictionary<TKey, TValue>` | Creates a deep clone of an immutable dictionary, preserving the key and value comparers (.NET only) |
