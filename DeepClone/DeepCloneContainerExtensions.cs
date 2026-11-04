@@ -47,11 +47,13 @@ public static class DeepCloneContainerExtensions
 		Ensure.NotNull(source);
 
 		T[] items = [.. source];
-		dest.Clear();
-		foreach (T? item in items)
+		T[] clones = new T[items.Length];
+		for (int i = 0; i < items.Length; i++)
 		{
-			dest.Add(DeepClone(item));
+			clones[i] = DeepClone(items[i]);
 		}
+
+		ReplaceContents(dest, clones);
 	}
 
 	/// <summary>
@@ -83,10 +85,47 @@ public static class DeepCloneContainerExtensions
 		Ensure.NotNull(source);
 
 		KeyValuePair<TKey, TValue>[] items = [.. source];
-		dest.Clear();
-		foreach (KeyValuePair<TKey, TValue> pair in items)
+		KeyValuePair<TKey, TValue>[] clones = new KeyValuePair<TKey, TValue>[items.Length];
+		for (int i = 0; i < items.Length; i++)
 		{
-			dest.Add(DeepClone(pair.Key), DeepClone(pair.Value));
+			clones[i] = new(DeepClone(items[i].Key), DeepClone(items[i].Value));
+		}
+
+		ReplaceContents(dest, clones);
+	}
+
+	/// <summary>
+	/// Replaces the contents of <paramref name="dest"/> with <paramref name="items"/>, restoring the original
+	/// contents if an <see cref="ICollection{T}.Add"/> throws part-way through.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the collection.</typeparam>
+	/// <param name="dest">The collection to fill.</param>
+	/// <param name="items">The already-cloned items to put in it.</param>
+	/// <remarks>
+	/// Every clone is made before the destination is touched, so a throwing <see cref="IDeepCloneable.DeepClone"/>
+	/// leaves it unchanged. An add can still be refused, for example a key that the destination's comparer treats
+	/// as a duplicate, and the original contents are put back before the exception propagates (ktsu-dev/DeepClone#90).
+	/// </remarks>
+	private static void ReplaceContents<T>(ICollection<T> dest, T[] items)
+	{
+		T[] original = [.. dest];
+		dest.Clear();
+		try
+		{
+			foreach (T item in items)
+			{
+				dest.Add(item);
+			}
+		}
+		catch
+		{
+			dest.Clear();
+			foreach (T item in original)
+			{
+				dest.Add(item);
+			}
+
+			throw;
 		}
 	}
 
