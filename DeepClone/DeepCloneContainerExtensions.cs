@@ -845,4 +845,59 @@ public static class DeepCloneContainerExtensions
 		Array.Reverse(snapshot);
 		return new(snapshot.Select(DeepClone));
 	}
+
+	/// <summary>
+	/// Deep clones a concurrent queue.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the queue.</typeparam>
+	/// <param name="source">The source queue to clone.</param>
+	/// <returns>A new concurrent queue containing deep clones of the original items in the same dequeue order if they
+	/// implement IDeepCloneable, otherwise containing the original items.</returns>
+	/// <remarks>
+	/// This method preserves the dequeue order of the queue. It clones from a single <see cref="ConcurrentQueue{T}.ToArray"/>
+	/// snapshot, so the clone is a consistent copy even while other threads enqueue or dequeue. Without this overload the
+	/// call bound to the <see cref="IEnumerable{T}"/> overload and returned a read-only list (ktsu-dev/DeepClone#128).
+	///
+	/// Example usage:
+	/// <code>
+	/// var clonedQueue = originalQueue.DeepClone();
+	/// </code>
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Style",
+		"IDE0305:Simplify collection initialization",
+		Justification = "ConcurrentQueue.ToArray takes one atomic snapshot; a spread enumerates while other threads enqueue or dequeue (ktsu-dev/DeepClone#128).")]
+	public static ConcurrentQueue<T> DeepClone<T>(this ConcurrentQueue<T> source)
+	{
+		Ensure.NotNull(source);
+
+		return new(source.ToArray().Select(DeepClone));
+	}
+
+	/// <summary>
+	/// Deep clones a concurrent bag.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the bag.</typeparam>
+	/// <param name="source">The source bag to clone.</param>
+	/// <returns>A new concurrent bag containing deep clones of the original items if they implement IDeepCloneable,
+	/// otherwise containing the original items.</returns>
+	/// <remarks>
+	/// A bag has no defined order, so only its contents are preserved. It clones from a single
+	/// <see cref="ConcurrentBag{T}.ToArray"/> snapshot, so the clone is a consistent copy even while other threads add or
+	/// take. Without this overload the call bound to the <see cref="IEnumerable{T}"/> overload and returned a read-only
+	/// list (ktsu-dev/DeepClone#128).
+	///
+	/// Example usage:
+	/// <code>
+	/// var clonedBag = originalBag.DeepClone();
+	/// </code>
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static ConcurrentBag<T> DeepClone<T>(this ConcurrentBag<T> source)
+	{
+		Ensure.NotNull(source);
+
+		return [.. source.ToArray().Select(DeepClone)];
+	}
 }
