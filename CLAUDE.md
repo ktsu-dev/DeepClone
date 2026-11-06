@@ -92,6 +92,6 @@ Tests use MSTest.Sdk. Test categories:
 
 ## Multi-targeting
 
-The library targets: `net10.0`, `net9.0`, `net8.0`, `net7.0`, `net6.0`, `net5.0`, `netstandard2.1`, `netstandard2.0`
+The library targets: `net10.0`, `net9.0`, `net8.0`, `netstandard2.1`, `netstandard2.0`. A .NET 5-7 app, .NET Framework, Unity or Mono restores a `netstandard` build, so `#if NET` code is not what those consumers run.
 
 Tests target only `net10.0`.
