@@ -337,12 +337,13 @@ public static class DeepCloneContainerExtensions
 	/// <remarks>
 	/// The items are cloned when this method is called, so the result is a snapshot: it does not change
 	/// when the source changes, and enumerating it again yields the same cloned instances. To get a
-	/// specific collection type, convert the result (for example using ToList() or ToArray()).
+	/// specific collection type, convert the result (for example using ToList() or ToHashSet()). Arrays,
+	/// <see cref="List{T}"/>, <see cref="Queue{T}"/> and <see cref="LinkedList{T}"/> have overloads that
+	/// already return their own type.
 	///
 	/// Example usage:
 	/// <code>
-	/// var clonedList = originalList.DeepClone().ToList();
-	/// var clonedArray = originalArray.DeepClone().ToArray();
+	/// var clonedSet = originalSequence.DeepClone().ToHashSet();
 	/// </code>
 	/// </remarks>
 	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
@@ -720,6 +721,35 @@ public static class DeepCloneContainerExtensions
 		Ensure.NotNull(source);
 
 		return [.. source.Select(DeepClone)];
+	}
+
+	/// <summary>
+	/// Deep clones an array.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the array.</typeparam>
+	/// <param name="source">The source array to clone.</param>
+	/// <returns>A new array of the same length containing deep clones of the original items in the same order if they
+	/// implement IDeepCloneable, otherwise containing the original items.</returns>
+	/// <remarks>
+	/// This method preserves the order of elements in the array. Without this overload the call bound to the <see cref="IEnumerable{T}"/> overload, which returns a read-only sequence that cannot be cast back to an array, so callers paid for a second copy with ToArray() (ktsu-dev/DeepClone#130).
+	///
+	/// Example usage:
+	/// <code>
+	/// var clonedArray = originalArray.DeepClone();
+	/// </code>
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static T[] DeepClone<T>(this T[] source)
+	{
+		Ensure.NotNull(source);
+
+		T[] clone = new T[source.Length];
+		for (int i = 0; i < source.Length; i++)
+		{
+			clone[i] = DeepClone(source[i]);
+		}
+
+		return clone;
 	}
 
 	/// <summary>
