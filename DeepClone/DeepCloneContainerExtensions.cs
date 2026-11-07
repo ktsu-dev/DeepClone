@@ -452,6 +452,32 @@ public static class DeepCloneContainerExtensions
 		return clone;
 	}
 
+#if NET9_0_OR_GREATER
+	/// <summary>
+	/// Deep clones an ordered dictionary, keeping its key comparer and key order.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="source">The source dictionary to clone.</param>
+	/// <returns>A new ordered dictionary with the source's comparer and key order, containing deep clones of the keys
+	/// and values if they implement IDeepCloneable, otherwise containing the original keys and values.</returns>
+	/// <remarks>
+	/// <see cref="OrderedDictionary{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/> and
+	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
+	/// <c>orderedDictionary.DeepClone()</c> compile without a cast (.NET 9 and later).
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static OrderedDictionary<TKey, TValue> DeepClone<TKey, TValue>(this OrderedDictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		OrderedDictionary<TKey, TValue> clone = new(source.Count, source.Comparer);
+		AddClonedPairs(clone, source);
+		return clone;
+	}
+#endif
+
 #if NET
 	/// <summary>
 	/// Deep clones an immutable dictionary, keeping its key and value comparers.
@@ -599,8 +625,8 @@ public static class DeepCloneContainerExtensions
 	/// <param name="source">The dictionary being cloned, inspected for its runtime type and comparer. A
 	/// <see cref="ReadOnlyDictionary{TKey, TValue}"/> is looked through to the dictionary it wraps.</param>
 	/// <param name="pairs">The key-value pairs of the dictionary being cloned.</param>
-	/// <returns>A <see cref="SortedList{TKey, TValue}"/> or <see cref="ConcurrentDictionary{TKey, TValue}"/> for a source of
-	/// that type, a <see cref="SortedDictionary{TKey, TValue}"/> for any other sorted source, otherwise a
+	/// <returns>A <see cref="SortedList{TKey, TValue}"/>, <see cref="ConcurrentDictionary{TKey, TValue}"/> or (.NET 9 and
+	/// later) <c>OrderedDictionary</c> for a source of that type, a <see cref="SortedDictionary{TKey, TValue}"/> for any other sorted source, otherwise a
 	/// <see cref="Dictionary{TKey, TValue}"/>. All of them implement <see cref="IReadOnlyDictionary{TKey, TValue}"/>.</returns>
 	private static IDictionary<TKey, TValue> CloneDictionary<TKey, TValue>(object source, IEnumerable<KeyValuePair<TKey, TValue>> pairs)
 		where TKey : notnull
@@ -615,6 +641,9 @@ public static class DeepCloneContainerExtensions
 			SortedDictionary<TKey, TValue> sorted => new SortedDictionary<TKey, TValue>(sorted.Comparer),
 			Dictionary<TKey, TValue> dictionary => new Dictionary<TKey, TValue>(dictionary.Count, dictionary.Comparer),
 			SortedList<TKey, TValue> sortedList => new SortedList<TKey, TValue>(sortedList.Count, sortedList.Comparer),
+#if NET9_0_OR_GREATER
+			OrderedDictionary<TKey, TValue> ordered => new OrderedDictionary<TKey, TValue>(ordered.Count, ordered.Comparer),
+#endif
 #if NET6_0_OR_GREATER
 			ConcurrentDictionary<TKey, TValue> concurrent => new ConcurrentDictionary<TKey, TValue>(concurrent.Comparer),
 #endif

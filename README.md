@@ -612,6 +612,7 @@ Extension methods for deep cloning various container types.
 | `DeepClone<TKey, TValue>` | `IDictionary<TKey, TValue?>?` | Creates a deep clone of a dictionary, preserving the key comparer where the runtime type exposes one |
 | `DeepClone<TKey, TValue>` | `IReadOnlyDictionary<TKey, TValue?>?` | Creates a deep clone of a read-only dictionary, preserving the key comparer where the runtime type exposes one |
 | `DeepClone<TKey, TValue>` | `SortedList<TKey, TValue>` | Creates a deep clone of a sorted list, preserving the key comparer |
+| `DeepClone<TKey, TValue>` | `OrderedDictionary<TKey, TValue>` | Creates a deep clone of an ordered dictionary, preserving the key comparer and key order (.NET 9 and later) |
 | `DeepClone<T>` | `HashSet<T?>?` | Creates a deep clone of a hash set, preserving the comparer |
 | `DeepClone<T>` | `List<T>` | Creates a deep clone of a list, preserving the element order |
 | `DeepClone<T>` | `Queue<T>` | Creates a deep clone of a queue, preserving the dequeue order |
