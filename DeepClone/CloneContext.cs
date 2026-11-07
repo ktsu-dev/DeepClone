@@ -71,17 +71,22 @@ internal static class CloneContext
 	/// <summary>
 	/// Leaves the clone context. Leaving the outermost scope forgets every clone it made.
 	/// </summary>
+	private static void Exit()
+	{
+		depth--;
+		if (depth == 0)
+		{
+			clones!.Clear();
+		}
+	}
+
+	/// <summary>
+	/// Leaves the clone context when disposed.
+	/// </summary>
 	internal readonly struct Scope : IDisposable
 	{
 		/// <inheritdoc />
-		public void Dispose()
-		{
-			depth--;
-			if (depth == 0)
-			{
-				clones!.Clear();
-			}
-		}
+		public void Dispose() => Exit();
 	}
 
 	/// <summary>
