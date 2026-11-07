@@ -46,12 +46,7 @@ public static class DeepCloneContainerExtensions
 
 		Ensure.NotNull(source);
 
-		T[] items = [.. source];
-		T[] clones = new T[items.Length];
-		for (int i = 0; i < items.Length; i++)
-		{
-			clones[i] = DeepClone(items[i]);
-		}
+		T[] clones = CloneAll(source);
 
 		ReplaceContents(dest, clones);
 	}
@@ -84,12 +79,7 @@ public static class DeepCloneContainerExtensions
 
 		Ensure.NotNull(source);
 
-		KeyValuePair<TKey, TValue>[] items = [.. source];
-		KeyValuePair<TKey, TValue>[] clones = new KeyValuePair<TKey, TValue>[items.Length];
-		for (int i = 0; i < items.Length; i++)
-		{
-			clones[i] = new(DeepClone(items[i].Key), DeepClone(items[i].Value));
-		}
+		KeyValuePair<TKey, TValue>[] clones = CloneAllPairs(source);
 
 		ReplaceContents(dest, clones);
 	}
@@ -200,10 +190,13 @@ public static class DeepCloneContainerExtensions
 
 		T[] items = [.. source];
 		T[] clones = new T[items.Length];
-		for (int i = 0; i < items.Length; i++)
+		using (CloneContext.Enter())
 		{
-			// PushRange pushes its first element first, so the last source item goes in first and the top stays on top.
-			clones[items.Length - 1 - i] = DeepClone(items[i]);
+			for (int i = 0; i < items.Length; i++)
+			{
+				// PushRange pushes its first element first, so the last source item goes in first and the top stays on top.
+				clones[items.Length - 1 - i] = DeepClone(items[i]);
+			}
 		}
 
 		dest.Clear();
@@ -253,9 +246,31 @@ public static class DeepCloneContainerExtensions
 	{
 		T[] items = [.. source];
 		T[] clones = new T[items.Length];
+		using CloneContext.Scope scope = CloneContext.Enter();
 		for (int i = 0; i < items.Length; i++)
 		{
 			clones[i] = DeepClone(items[i]);
+		}
+
+		return clones;
+	}
+
+	/// <summary>
+	/// Deep clones the key and value of each pair, within one clone context, so a key or value
+	/// reached more than once is cloned once.
+	/// </summary>
+	/// <typeparam name="TKey">The type of the keys.</typeparam>
+	/// <typeparam name="TValue">The type of the values.</typeparam>
+	/// <param name="pairs">The key-value pairs to clone.</param>
+	/// <returns>The cloned pairs.</returns>
+	private static KeyValuePair<TKey, TValue>[] CloneAllPairs<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> pairs)
+	{
+		KeyValuePair<TKey, TValue>[] items = [.. pairs];
+		KeyValuePair<TKey, TValue>[] clones = new KeyValuePair<TKey, TValue>[items.Length];
+		using CloneContext.Scope scope = CloneContext.Enter();
+		for (int i = 0; i < items.Length; i++)
+		{
+			clones[i] = new(DeepClone(items[i].Key), DeepClone(items[i].Value));
 		}
 
 		return clones;
@@ -350,7 +365,7 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		return [.. source.Select(DeepClone)];
+		return [.. CloneAll(source)];
 	}
 
 	/// <summary>
@@ -472,7 +487,7 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		return ImmutableDictionary.CreateRange(source.KeyComparer, source.ValueComparer, ClonePairs(source));
+		return ImmutableDictionary.CreateRange(source.KeyComparer, source.ValueComparer, CloneAllPairs(source));
 	}
 
 	/// <summary>
@@ -494,18 +509,9 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		return ImmutableSortedDictionary.CreateRange(source.KeyComparer, source.ValueComparer, ClonePairs(source));
+		return ImmutableSortedDictionary.CreateRange(source.KeyComparer, source.ValueComparer, CloneAllPairs(source));
 	}
 
-	/// <summary>
-	/// Deep clones the key and value of each pair.
-	/// </summary>
-	/// <typeparam name="TKey">The type of the keys.</typeparam>
-	/// <typeparam name="TValue">The type of the values.</typeparam>
-	/// <param name="pairs">The key-value pairs to clone.</param>
-	/// <returns>The cloned pairs.</returns>
-	private static IEnumerable<KeyValuePair<TKey, TValue>> ClonePairs<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> pairs) =>
-		pairs.Select(p => new KeyValuePair<TKey, TValue>(DeepClone(p.Key), DeepClone(p.Value)));
 #endif
 
 	/// <summary>
@@ -528,7 +534,7 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		IEnumerable<KeyValuePair<TKey, TValue>> pairs = source.Select(p => new KeyValuePair<TKey, TValue>(DeepClone(p.Key), DeepClone(p.Value)));
+		KeyValuePair<TKey, TValue>[] pairs = CloneAllPairs(source);
 #if NET6_0_OR_GREATER
 		return new(pairs, source.Comparer);
 #else
@@ -666,6 +672,7 @@ public static class DeepCloneContainerExtensions
 	private static void AddClonedPairs<TKey, TValue>(IDictionary<TKey, TValue> dest, IEnumerable<KeyValuePair<TKey, TValue>> pairs)
 		where TKey : notnull
 	{
+		using CloneContext.Scope scope = CloneContext.Enter();
 		foreach (KeyValuePair<TKey, TValue> pair in pairs)
 		{
 			dest.Add(DeepClone(pair.Key), DeepClone(pair.Value));
@@ -692,7 +699,7 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		return new(source.Select(DeepClone), source.Comparer);
+		return new(CloneAll(source), source.Comparer);
 	}
 
 	/// <summary>
@@ -719,7 +726,7 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		return [.. source.Select(DeepClone)];
+		return [.. CloneAll(source)];
 	}
 
 	/// <summary>
@@ -742,7 +749,7 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		return new(source.Select(DeepClone));
+		return new(CloneAll(source));
 	}
 
 	/// <summary>
@@ -765,7 +772,7 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		return new(source.Select(DeepClone));
+		return new(CloneAll(source));
 	}
 
 	/// <summary>
@@ -788,7 +795,7 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		return new(source.Select(DeepClone), source.Comparer);
+		return new(CloneAll(source), source.Comparer);
 	}
 
 	/// <summary>
@@ -811,7 +818,7 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		return new(source.Reverse().Select(DeepClone));
+		return new(CloneAll(source.Reverse()));
 	}
 
 	/// <summary>
@@ -843,6 +850,6 @@ public static class DeepCloneContainerExtensions
 
 		T[] snapshot = source.ToArray();
 		Array.Reverse(snapshot);
-		return new(snapshot.Select(DeepClone));
+		return new(CloneAll(snapshot));
 	}
 }

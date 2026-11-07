@@ -21,7 +21,7 @@ Inspired by and based on the [ppy/osu!](https://github.com/ppy/osu) project's cl
 - **Generic and Non-Generic Interfaces**: Works with any reference type (`class`)
 - **Deep Cloning**: Ensures that the cloned object is a completely independent copy, including all nested references
 - **Inheritance Support**: Easily implement deep cloning in class hierarchies
-- **Circular References**: Handles circular object references correctly without stack overflows or infinite loops
+- **Circular and Shared References**: Within one `DeepClone()` call, an object reached more than once is cloned once, so a cycle resolves to the clone being built rather than overflowing the stack, and two references to one object point at one clone. Separate calls share nothing
 - **Collection Extensions**: Deep clone collections including:
   - Standard collections (List, Dictionary, Array)
   - Specialized collections (HashSet, SortedSet, Stack, Queue, LinkedList)
@@ -689,7 +689,7 @@ When implementing deep cloning, follow these guidelines:
 3. For collections, use the `DeepCloneFrom` extension methods
 4. Always call `base.DeepClone(clone)` first in derived classes
 5. For arrays, create a new array with the same dimensions
-6. Handle circular references to avoid infinite recursion
+6. Clone back-references such as `Parent` with `DeepClone()` too: within one clone operation it returns the clone already being built, so cycles need no tracking of your own
 7. Always check for null with `ArgumentNullException.ThrowIfNull` or null conditionals
 
 ## Performance Considerations
@@ -753,56 +753,29 @@ Replacing `Table` on a clone doesn't affect the original or the other clones. To
 
 **Symptom**: StackOverflowException occurs during deep cloning.
 
-**Solution**: This typically indicates a circular reference issue:
-- Implement circular reference detection in your DeepClone method
-- Use a Dictionary to track already-cloned objects
+**Solution**: `DeepCloneable<TDerived>.DeepClone()` records each clone before calling your `DeepClone(clone)` override, so a cycle made of `DeepCloneable` objects ends at the clone already being built. A stack overflow therefore points at a reference the library cannot see:
+- A type that implements `IDeepCloneable` directly, without `DeepCloneable<TDerived>`, is not tracked. Derive it from `DeepCloneable<TDerived>`, or handle its cycles yourself
+- An override that builds new objects by hand (`new Node { Parent = ... }`) instead of calling `DeepClone()` on the referenced object bypasses the tracking
+
+Clone every reference through `DeepClone()` and cycles resolve on their own:
 
 ```csharp
-public class NodeWithCircularReferences : DeepCloneable<NodeWithCircularReferences>
+public class TreeNode : DeepCloneable<TreeNode>
 {
     public string? Name { get; set; }
-    public NodeWithCircularReferences? Parent { get; set; }
-    public List<NodeWithCircularReferences> Children { get; set; } = new();
-    
-    // Dictionary for tracking already cloned instances across the object graph
-    private static readonly ThreadLocal<Dictionary<NodeWithCircularReferences, NodeWithCircularReferences>> CloneTracker = 
-        new(() => new Dictionary<NodeWithCircularReferences, NodeWithCircularReferences>());
-    
-    protected override NodeWithCircularReferences CreateInstance() => new();
-    
-    protected override void DeepClone(NodeWithCircularReferences clone)
+    public TreeNode? Parent { get; set; }
+    public List<TreeNode> Children { get; } = new();
+
+    protected override TreeNode CreateInstance() => new();
+
+    protected override void DeepClone(TreeNode clone)
     {
         ArgumentNullException.ThrowIfNull(clone);
         base.DeepClone(clone);
-        
-        // Ensure we have a clone tracker
-        var cloneTracker = CloneTracker.Value!;
-        
-        // Track this instance and its clone
-        cloneTracker[this] = clone;
-        
-        // Set simple properties
+
         clone.Name = Name;
-        
-        // Handle potential circular reference with Parent
-        if (Parent != null)
-        {
-            // Check if parent was already cloned in this cloning operation
-            if (cloneTracker.TryGetValue(Parent, out var parentClone))
-                clone.Parent = parentClone;
-            else
-                clone.Parent = Parent.DeepClone(); // This will add to the tracker
-        }
-        
-        // Handle collection of children that might have circular references
-        foreach (var child in Children)
-        {
-            // Check if child was already cloned in this operation
-            if (cloneTracker.TryGetValue(child, out var childClone))
-                clone.Children.Add(childClone);
-            else
-                clone.Children.Add(child.DeepClone()); // This will add to the tracker
-        }
+        clone.Parent = Parent?.DeepClone(); // The parent's clone, when cloning from the root
+        clone.Children.DeepCloneFrom(Children);
     }
 }
 ```
