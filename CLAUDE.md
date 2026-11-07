@@ -63,6 +63,7 @@ public class MyClass : DeepCloneable<MyClass>
 - **Factory Method**: `CreateInstance()` separates object creation from property copying
 - **Extension Methods**: `DeepCloneFrom()` handles in-place collection cloning; `DeepClone()` returns new collections
 - **Polymorphic Support**: Non-generic `IDeepCloneable` interface enables cloning through base type references
+- **Clone Context**: `CloneContext` (internal, thread-static) maps each source to its clone for one top-level `DeepClone()` call or collection extension call. `DeepCloneable.DeepClone()` registers the clone before calling the override, so cycles resolve and shared references stay shared; the outermost scope clears the map
 
 ## Project Structure
 
