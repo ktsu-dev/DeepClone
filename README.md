@@ -623,6 +623,8 @@ Extension methods for deep cloning various container types.
 | `DeepClone<T>` | `ImmutableList<T>` | Creates a deep clone of an immutable list |
 | `DeepClone<TKey, TValue>` | `ImmutableDictionary<TKey, TValue>` | Creates a deep clone of an immutable dictionary, preserving the key and value comparers (.NET only) |
 | `DeepClone<TKey, TValue>` | `ImmutableSortedDictionary<TKey, TValue>` | Creates a deep clone of an immutable sorted dictionary, preserving the key and value comparers (.NET only) |
+| `DeepClone<TKey, TValue>` | `FrozenDictionary<TKey, TValue>` | Creates a deep clone of a frozen dictionary, preserving the key comparer (.NET 8 and later) |
+| `DeepClone<T>` | `FrozenSet<T>` | Creates a deep clone of a frozen set, preserving the comparer (.NET 8 and later) |
 | `DeepClone<T>` | `ImmutableHashSet<T>` | Creates a deep clone of an immutable hash set |
 | `DeepClone<T>` | `ImmutableSortedSet<T>` | Creates a deep clone of an immutable sorted set |
 | `DeepClone<T>` | `ImmutableStack<T>` | Creates a deep clone of an immutable stack |
