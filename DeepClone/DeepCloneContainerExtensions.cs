@@ -40,11 +40,20 @@ public static class DeepCloneContainerExtensions
 	/// </code>
 	/// </remarks>
 	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
+	/// <exception cref="ArgumentException">
+	/// Thrown if <paramref name="dest"/> is read-only, such as an array held as an <see cref="ICollection{T}"/>.
+	/// An array declared as one binds to <see cref="DeepCloneFrom{T}(T[], IEnumerable{T})"/> instead.
+	/// </exception>
 	public static void DeepCloneFrom<T>(this ICollection<T> dest, IEnumerable<T> source)
 	{
 		Ensure.NotNull(dest);
 
 		Ensure.NotNull(source);
+
+		if (dest.IsReadOnly)
+		{
+			throw new ArgumentException("The destination collection is read-only, so it can't be cloned into.", nameof(dest));
+		}
 
 		T[] items = [.. source];
 		T[] clones = new T[items.Length];
@@ -54,6 +63,35 @@ public static class DeepCloneContainerExtensions
 		}
 
 		ReplaceContents(dest, clones);
+	}
+
+	/// <summary>
+	/// Deep clones items from a source sequence into a destination array of the same length, element by element.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the collections.</typeparam>
+	/// <param name="dest">The destination array to clone into.</param>
+	/// <param name="source">The source to clone from, which must hold exactly <c>dest.Length</c> items.</param>
+	/// <remarks>
+	/// An array is fixed-size, so the <see cref="ICollection{T}"/> overload, which clears the destination, can't fill
+	/// it. This overload overwrites each element in place instead, which lets a get-only array property be cloned.
+	/// Every item is cloned and the length is checked before <paramref name="dest"/> is touched, so a throwing clone or a
+	/// length mismatch leaves it unchanged, and <c>array.DeepCloneFrom(array)</c> keeps its values.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
+	/// <exception cref="ArgumentException">Thrown if <paramref name="source"/> doesn't hold exactly <c>dest.Length</c> items.</exception>
+	public static void DeepCloneFrom<T>(this T[] dest, IEnumerable<T> source)
+	{
+		Ensure.NotNull(dest);
+
+		Ensure.NotNull(source);
+
+		T[] clones = CloneAll(source);
+		if (clones.Length != dest.Length)
+		{
+			throw new ArgumentException($"The source holds {clones.Length} items but the destination array has length {dest.Length}.", nameof(source));
+		}
+
+		clones.CopyTo(dest, 0);
 	}
 
 	/// <summary>
