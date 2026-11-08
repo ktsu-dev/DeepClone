@@ -140,4 +140,74 @@ public class EnumerableCloneTests
 		// Assert
 		Assert.AreSequenceEqual(original, clone);
 	}
+
+	/// <summary>
+	/// Tests that a pair boxed in a sequence of objects clones its key and value (ktsu-dev/DeepClone#135).
+	/// </summary>
+	[TestMethod]
+	public void Enumerable_DeepClone_BoxedPair_ShouldCloneKeyAndValue()
+	{
+		// Arrange
+		SimpleObject key = new() { Id = 1, Name = "Key" };
+		SimpleObject value = new() { Id = 2, Name = "Value" };
+		List<object> original = [new KeyValuePair<SimpleObject, SimpleObject>(key, value)];
+
+		// Act
+		List<object> clone = [.. original.DeepClone()];
+
+		// Assert
+		KeyValuePair<SimpleObject, SimpleObject> pair = (KeyValuePair<SimpleObject, SimpleObject>)clone.Single();
+		Assert.AreNotSame(key, pair.Key);
+		Assert.AreNotSame(value, pair.Value);
+		Assert.AreEqual("Key", pair.Key.Name);
+		Assert.AreEqual("Value", pair.Value.Name);
+	}
+
+	/// <summary>
+	/// Tests that a boxed pair of non-cloneables, and other boxed values, are copied through unchanged
+	/// alongside a boxed pair that is cloned.
+	/// </summary>
+	[TestMethod]
+	public void Enumerable_DeepClone_MixedObjects_ShouldCloneOnlyWhatIsCloneable()
+	{
+		// Arrange
+		SimpleObject value = new() { Id = 1, Name = "Value" };
+		List<object> original = [new KeyValuePair<string, int>("a", 1), "text", 42, new KeyValuePair<string, SimpleObject>("k", value)];
+
+		// Act
+		List<object> clone = [.. original.DeepClone()];
+
+		// Assert
+		Assert.HasCount(4, clone);
+		Assert.AreEqual(new KeyValuePair<string, int>("a", 1), clone[0]);
+		Assert.AreSame(original[1], clone[1]);
+		Assert.AreEqual(42, clone[2]);
+		KeyValuePair<string, SimpleObject> pair = (KeyValuePair<string, SimpleObject>)clone[3];
+		Assert.AreEqual("k", pair.Key);
+		Assert.AreNotSame(value, pair.Value);
+		Assert.AreEqual("Value", pair.Value.Name);
+	}
+
+	/// <summary>
+	/// Tests that a nullable pair clones its key and value, and a null one stays null (ktsu-dev/DeepClone#135).
+	/// </summary>
+	[TestMethod]
+	public void Enumerable_DeepClone_NullablePairs_ShouldCloneKeyAndValue()
+	{
+		// Arrange
+		SimpleObject value = new() { Id = 1, Name = "Value" };
+		List<KeyValuePair<string, SimpleObject>?> original = [new KeyValuePair<string, SimpleObject>("k", value), null];
+
+		// Act
+		List<KeyValuePair<string, SimpleObject>?> clone = [.. original.DeepClone()];
+
+		// Assert
+		Assert.HasCount(2, clone);
+		Assert.IsNotNull(clone[0]);
+		KeyValuePair<string, SimpleObject> pair = clone[0]!.Value;
+		Assert.AreEqual("k", pair.Key);
+		Assert.AreNotSame(value, pair.Value);
+		Assert.AreEqual("Value", pair.Value.Name);
+		Assert.IsNull(clone[1]);
+	}
 }
