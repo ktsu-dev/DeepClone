@@ -8,6 +8,9 @@ using System.Reflection;
 #if NET
 using System.Collections.Immutable;
 #endif
+#if NET8_0_OR_GREATER
+using System.Collections.Frozen;
+#endif
 
 /// <summary>
 /// Extension methods for deep cloning collections of objects.
@@ -577,9 +580,9 @@ public static class DeepCloneContainerExtensions
 	/// are deep cloned if they implement IDeepCloneable. The source's key comparer is kept when the runtime
 	/// type exposes one: <see cref="Dictionary{TKey, TValue}"/>, <see cref="SortedDictionary{TKey, TValue}"/>,
 	/// <see cref="SortedList{TKey, TValue}"/>, <see cref="ConcurrentDictionary{TKey, TValue}"/> (.NET 6 and later),
-	/// and, on .NET, <c>ImmutableDictionary</c> and <c>ImmutableSortedDictionary</c>. A sorted source stays sorted,
-	/// a sorted list or concurrent dictionary is cloned as the same type, and an immutable source is cloned as the
-	/// mutable dictionary of the same kind. A <see cref="ReadOnlyDictionary{TKey, TValue}"/> is cloned according to the
+	/// on .NET, <c>ImmutableDictionary</c> and <c>ImmutableSortedDictionary</c>, and, on .NET 8 and later,
+	/// <c>FrozenDictionary</c>. A sorted source stays sorted, a sorted list or concurrent dictionary is cloned as the
+	/// same type, and an immutable or frozen source is cloned as the mutable dictionary of the same kind. A <see cref="ReadOnlyDictionary{TKey, TValue}"/> is cloned according to the
 	/// dictionary it wraps.
 	///
 	/// Example usage:
@@ -734,6 +737,49 @@ public static class DeepCloneContainerExtensions
 		return ImmutableSortedDictionary.CreateRange(source.KeyComparer, source.ValueComparer, ClonePairs(source));
 	}
 
+#if NET8_0_OR_GREATER
+	/// <summary>
+	/// Deep clones a frozen dictionary, keeping its key comparer.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="source">The source dictionary to clone.</param>
+	/// <returns>A new frozen dictionary with the source's comparer, containing deep clones of the keys and values
+	/// if they implement IDeepCloneable, otherwise containing the original keys and values.</returns>
+	/// <remarks>
+	/// <see cref="FrozenDictionary{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/> and
+	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
+	/// <c>frozenDictionary.DeepClone()</c> compile without a cast (.NET 8 and later).
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static FrozenDictionary<TKey, TValue> DeepClone<TKey, TValue>(this FrozenDictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		return ClonePairs(source).ToFrozenDictionary(source.Comparer);
+	}
+
+	/// <summary>
+	/// Deep clones a frozen set, keeping its comparer.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the set.</typeparam>
+	/// <param name="source">The source set to clone.</param>
+	/// <returns>A new frozen set with the source's comparer, containing deep clones of the original items if they
+	/// implement IDeepCloneable, otherwise containing the original items.</returns>
+	/// <remarks>
+	/// Without this overload a frozen set binds to the <see cref="IEnumerable{T}"/> overload, which returns a list
+	/// and loses the comparer (.NET 8 and later).
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static FrozenSet<T> DeepClone<T>(this FrozenSet<T> source)
+	{
+		Ensure.NotNull(source);
+
+		return source.Select(DeepClone).ToFrozenSet(source.Comparer);
+	}
+#endif
+
 	/// <summary>
 	/// Deep clones the key and value of each pair.
 	/// </summary>
@@ -810,8 +856,8 @@ public static class DeepCloneContainerExtensions
 	/// <see cref="IDictionary{TKey, TValue}"/> overload, a sorted source stays sorted and the source's key comparer
 	/// is kept when the runtime type exposes one: <see cref="Dictionary{TKey, TValue}"/>,
 	/// <see cref="SortedDictionary{TKey, TValue}"/>, <see cref="SortedList{TKey, TValue}"/>,
-	/// <see cref="ConcurrentDictionary{TKey, TValue}"/> (.NET 6 and later), and, on .NET, <c>ImmutableDictionary</c>
-	/// and <c>ImmutableSortedDictionary</c>.
+	/// <see cref="ConcurrentDictionary{TKey, TValue}"/> (.NET 6 and later), on .NET, <c>ImmutableDictionary</c>
+	/// and <c>ImmutableSortedDictionary</c>, and, on .NET 8 and later, <c>FrozenDictionary</c>.
 	///
 	/// Example usage:
 	/// <code>
@@ -862,6 +908,10 @@ public static class DeepCloneContainerExtensions
 			// The immutable types cannot be filled in place, so the clone is the mutable type with the same lookup.
 			ImmutableSortedDictionary<TKey, TValue> immutableSorted => new SortedDictionary<TKey, TValue>(immutableSorted.KeyComparer),
 			ImmutableDictionary<TKey, TValue> immutable => new Dictionary<TKey, TValue>(immutable.Count, immutable.KeyComparer),
+#endif
+#if NET8_0_OR_GREATER
+			// A frozen dictionary cannot be filled in place either, so the clone is a dictionary with the same comparer.
+			FrozenDictionary<TKey, TValue> frozen => new Dictionary<TKey, TValue>(frozen.Count, frozen.Comparer),
 #endif
 			_ => new Dictionary<TKey, TValue>(),
 		};
