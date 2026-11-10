@@ -400,12 +400,15 @@ public static class DeepCloneContainerExtensions
 	/// Without that, a dictionary reached only as a sequence of pairs (an <see cref="IReadOnlyDictionary{TKey, TValue}"/>
 	/// passed to <see cref="DeepCloneFrom{T}(ICollection{T}, IEnumerable{T})"/>, or LINQ over a dictionary)
 	/// came back sharing its keys and values with the source (ktsu-dev/DeepClone#82).
+	/// A pair held as <c>KeyValuePair&lt;TKey, TValue&gt;?</c>, or boxed in an element type such as
+	/// <see cref="object"/>, is rebuilt the same way, chosen from its runtime type (ktsu-dev/DeepClone#135).
 	/// </remarks>
 	private static T DeepClone<T>(T source) => source switch
 	{
 		null => default!,
 		IDeepCloneable cloneable => (T)cloneable.DeepClone(),
 		_ when PairCloner<T>.Instance is { } pairCloner => pairCloner.Clone(source),
+		_ when !typeof(T).IsValueType && BoxedPairCloner.For(source.GetType()) is { } boxedCloner => (T)boxedCloner.CloneBoxed(source),
 		_ => source,
 	};
 
@@ -428,12 +431,76 @@ public static class DeepCloneContainerExtensions
 	/// </summary>
 	/// <typeparam name="TKey">The type of the key.</typeparam>
 	/// <typeparam name="TValue">The type of the value.</typeparam>
-	private sealed class PairElementCloner<TKey, TValue> : IElementCloner<KeyValuePair<TKey, TValue>>
+	private sealed class PairElementCloner<TKey, TValue> : IElementCloner<KeyValuePair<TKey, TValue>>, IBoxedCloner
 	{
 		/// <inheritdoc />
 		public KeyValuePair<TKey, TValue> Clone(KeyValuePair<TKey, TValue> source) =>
 			new(DeepClone(source.Key), DeepClone(source.Value));
+
+		/// <inheritdoc />
+		public object CloneBoxed(object source) => Clone((KeyValuePair<TKey, TValue>)source);
 	}
+
+	/// <summary>
+	/// Deep clones the key and value of a key-value pair held as a <see cref="Nullable{T}"/>.
+	/// </summary>
+	/// <typeparam name="TKey">The type of the key.</typeparam>
+	/// <typeparam name="TValue">The type of the value.</typeparam>
+	private sealed class NullablePairElementCloner<TKey, TValue> : IElementCloner<KeyValuePair<TKey, TValue>?>
+	{
+		/// <inheritdoc />
+		public KeyValuePair<TKey, TValue>? Clone(KeyValuePair<TKey, TValue>? source) =>
+			source is { } pair ? new KeyValuePair<TKey, TValue>(DeepClone(pair.Key), DeepClone(pair.Value)) : null;
+	}
+
+	/// <summary>
+	/// Deep clones an element that is known only by its runtime type.
+	/// </summary>
+	private interface IBoxedCloner
+	{
+		/// <summary>
+		/// Deep clones <paramref name="source"/>.
+		/// </summary>
+		/// <param name="source">The boxed element to clone.</param>
+		/// <returns>The boxed clone.</returns>
+		public object CloneBoxed(object source);
+	}
+
+	/// <summary>
+	/// Caches, per runtime type, the cloner that clones a boxed key-value pair.
+	/// </summary>
+	private static class BoxedPairCloner
+	{
+		private static readonly ConcurrentDictionary<Type, IBoxedCloner?> Cloners = new();
+
+		/// <summary>
+		/// Gets the cloner for a boxed value of <paramref name="runtimeType"/> when it is a
+		/// <see cref="KeyValuePair{TKey, TValue}"/>, otherwise <see langword="null"/>.
+		/// </summary>
+		/// <param name="runtimeType">The runtime type of the element.</param>
+		/// <returns>The cloner, or <see langword="null"/>.</returns>
+		internal static IBoxedCloner? For(Type runtimeType) =>
+			IsKeyValuePair(runtimeType)
+				? Cloners.GetOrAdd(runtimeType, static type => (IBoxedCloner)CreatePairCloner(type.GetGenericArguments()))
+				: null;
+	}
+
+	/// <summary>
+	/// Determines whether <paramref name="type"/> is a closed <see cref="KeyValuePair{TKey, TValue}"/>.
+	/// </summary>
+	/// <param name="type">The type to check.</param>
+	/// <returns><see langword="true"/> when it is a key-value pair type.</returns>
+	private static bool IsKeyValuePair(Type type) =>
+		type.IsGenericType && type.GetGenericTypeDefinition() == typeof(KeyValuePair<,>);
+
+	/// <summary>
+	/// Creates the <see cref="PairElementCloner{TKey, TValue}"/> for a pair's key and value types. This is the one
+	/// place a pair cloner is made from reflected type arguments.
+	/// </summary>
+	/// <param name="pairArguments">The key and value types.</param>
+	/// <returns>The cloner.</returns>
+	private static object CreatePairCloner(Type[] pairArguments) =>
+		Activator.CreateInstance(typeof(PairElementCloner<,>).MakeGenericType(pairArguments))!;
 
 	/// <summary>
 	/// Caches, per element type, the cloner that clones it as a key-value pair.
@@ -443,12 +510,23 @@ public static class DeepCloneContainerExtensions
 	{
 		/// <summary>
 		/// Gets a <see cref="PairElementCloner{TKey, TValue}"/> for <typeparamref name="T"/> when it is a
-		/// <see cref="KeyValuePair{TKey, TValue}"/>, otherwise <see langword="null"/>.
+		/// <see cref="KeyValuePair{TKey, TValue}"/>, a <see cref="NullablePairElementCloner{TKey, TValue}"/> when it is a
+		/// nullable one, otherwise <see langword="null"/>.
 		/// </summary>
-		internal static IElementCloner<T>? Instance { get; } =
-			typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
-				? (IElementCloner<T>)Activator.CreateInstance(typeof(PairElementCloner<,>).MakeGenericType(typeof(T).GetGenericArguments()))!
+		internal static IElementCloner<T>? Instance { get; } = Create();
+
+		private static IElementCloner<T>? Create()
+		{
+			if (IsKeyValuePair(typeof(T)))
+			{
+				return (IElementCloner<T>)CreatePairCloner(typeof(T).GetGenericArguments());
+			}
+
+			Type? underlying = Nullable.GetUnderlyingType(typeof(T));
+			return underlying is not null && IsKeyValuePair(underlying)
+				? (IElementCloner<T>)Activator.CreateInstance(typeof(NullablePairElementCloner<,>).MakeGenericType(underlying.GetGenericArguments()))!
 				: null;
+		}
 	}
 
 	/// <summary>
