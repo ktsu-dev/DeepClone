@@ -38,13 +38,25 @@ public static class DeepCloneContainerExtensions
 	/// var clonedList = new List&lt;MyType&gt;();
 	/// clonedList.DeepCloneFrom(originalList);
 	/// </code>
+	/// <para>
+	/// The destination keeps its own comparer. A <see cref="HashSet{T}"/> or <see cref="SortedSet{T}"/> source whose
+	/// comparer differs from the destination's would clone into a collection that drops elements or orders them
+	/// differently, so that case throws instead. Assign <c>dest = source.DeepClone()</c> for a settable property,
+	/// which keeps the source's comparer, and keep <c>DeepCloneFrom</c> for get-only ones.
+	/// </para>
 	/// </remarks>
 	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
+	/// <exception cref="ArgumentException">
+	/// Thrown, before <paramref name="dest"/> is changed, if both are <see cref="HashSet{T}"/> or both are
+	/// <see cref="SortedSet{T}"/> and their comparers differ.
+	/// </exception>
 	public static void DeepCloneFrom<T>(this ICollection<T> dest, IEnumerable<T> source)
 	{
 		Ensure.NotNull(dest);
 
 		Ensure.NotNull(source);
+
+		EnsureSameComparer(dest, source);
 
 		T[] items = [.. source];
 		T[] clones = new T[items.Length];
@@ -75,14 +87,27 @@ public static class DeepCloneContainerExtensions
 	/// var clonedDict = new Dictionary&lt;KeyType, ValueType&gt;();
 	/// clonedDict.DeepCloneFrom(originalDict);
 	/// </code>
+	/// <para>
+	/// The destination keeps its own key comparer. A <see cref="Dictionary{TKey, TValue}"/>,
+	/// <see cref="SortedDictionary{TKey, TValue}"/> or <see cref="SortedList{TKey, TValue}"/> source whose comparer
+	/// differs from the destination's would clone into a dictionary whose lookups miss or whose order changes, so that
+	/// case throws instead. Assign <c>dest = source.DeepClone()</c> for a settable property, which keeps the source's
+	/// comparer, and keep <c>DeepCloneFrom</c> for get-only ones.
+	/// </para>
 	/// </remarks>
 	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
+	/// <exception cref="ArgumentException">
+	/// Thrown, before <paramref name="dest"/> is changed, if both are the same one of those dictionary kinds and their
+	/// comparers differ.
+	/// </exception>
 	public static void DeepCloneFrom<TKey, TValue>(this IDictionary<TKey, TValue> dest, IDictionary<TKey, TValue> source)
 		where TKey : notnull
 	{
 		Ensure.NotNull(dest);
 
 		Ensure.NotNull(source);
+
+		EnsureSameComparer(dest, source);
 
 		KeyValuePair<TKey, TValue>[] items = [.. source];
 		KeyValuePair<TKey, TValue>[] clones = new KeyValuePair<TKey, TValue>[items.Length];
@@ -93,6 +118,105 @@ public static class DeepCloneContainerExtensions
 
 		ReplaceContents(dest, clones);
 	}
+
+	/// <summary>
+	/// Throws when <paramref name="dest"/> and <paramref name="source"/> are the same comparer-holding collection kind
+	/// with different comparers, since filling one from the other would silently change the clone (ktsu-dev/DeepClone#139).
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the collections.</typeparam>
+	/// <param name="dest">The destination collection.</param>
+	/// <param name="source">The source collection.</param>
+	private static void EnsureSameComparer<T>(ICollection<T> dest, IEnumerable<T> source)
+	{
+		object? destComparer;
+		object? sourceComparer;
+		string kind;
+		switch (dest)
+		{
+			case HashSet<T> destSet when source is HashSet<T> sourceSet:
+				(destComparer, sourceComparer, kind) = (destSet.Comparer, sourceSet.Comparer, "HashSet");
+				break;
+			case SortedSet<T> destSet when source is SortedSet<T> sourceSet:
+				(destComparer, sourceComparer, kind) = (destSet.Comparer, sourceSet.Comparer, "SortedSet");
+				break;
+			default:
+				return;
+		}
+
+		if (!ComparersMatch<T>(destComparer, sourceComparer))
+		{
+			throw new ArgumentException(ComparerMismatchMessage(kind, destComparer, sourceComparer), nameof(source));
+		}
+	}
+
+	/// <summary>
+	/// Throws when <paramref name="dest"/> and <paramref name="source"/> are the same comparer-holding dictionary kind
+	/// with different key comparers, since filling one from the other would silently change the clone (ktsu-dev/DeepClone#139).
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionaries.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionaries.</typeparam>
+	/// <param name="dest">The destination dictionary.</param>
+	/// <param name="source">The source dictionary.</param>
+	private static void EnsureSameComparer<TKey, TValue>(IDictionary<TKey, TValue> dest, IDictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		object? destComparer;
+		object? sourceComparer;
+		string kind;
+		switch (dest)
+		{
+			case Dictionary<TKey, TValue> destMap when source is Dictionary<TKey, TValue> sourceMap:
+				(destComparer, sourceComparer, kind) = (destMap.Comparer, sourceMap.Comparer, "Dictionary");
+				break;
+			case SortedDictionary<TKey, TValue> destMap when source is SortedDictionary<TKey, TValue> sourceMap:
+				(destComparer, sourceComparer, kind) = (destMap.Comparer, sourceMap.Comparer, "SortedDictionary");
+				break;
+			case SortedList<TKey, TValue> destMap when source is SortedList<TKey, TValue> sourceMap:
+				(destComparer, sourceComparer, kind) = (destMap.Comparer, sourceMap.Comparer, "SortedList");
+				break;
+			default:
+				return;
+		}
+
+		if (!ComparersMatch<TKey>(destComparer, sourceComparer))
+		{
+			throw new ArgumentException(ComparerMismatchMessage(kind, destComparer, sourceComparer), nameof(source));
+		}
+	}
+
+	/// <summary>
+	/// Reports whether two comparers compare the same way.
+	/// </summary>
+	/// <typeparam name="T">The type the comparers compare.</typeparam>
+	/// <param name="destComparer">The destination's comparer.</param>
+	/// <param name="sourceComparer">The source's comparer.</param>
+	/// <returns><see langword="true"/> if they are equal once normalized.</returns>
+	private static bool ComparersMatch<T>(object? destComparer, object? sourceComparer) =>
+		Equals(Normalize<T>(destComparer), Normalize<T>(sourceComparer));
+
+	/// <summary>
+	/// Builds the message for a comparer mismatch, naming both comparers and the fix.
+	/// </summary>
+	/// <param name="kind">The collection kind.</param>
+	/// <param name="destComparer">The destination's comparer.</param>
+	/// <param name="sourceComparer">The source's comparer.</param>
+	/// <returns>The message.</returns>
+	private static string ComparerMismatchMessage(string kind, object? destComparer, object? sourceComparer) =>
+		$"The source {kind} uses comparer {sourceComparer?.GetType().Name ?? "null"} but the destination uses " +
+		$"{destComparer?.GetType().Name ?? "null"}, so DeepCloneFrom would produce a clone that behaves differently " +
+		"from its source. Assign dest = source.DeepClone() instead, which keeps the source's comparer.";
+
+	/// <summary>
+	/// Maps <see cref="StringComparer.Ordinal"/> to the default string equality comparer, which compares the same way,
+	/// so a set built with one and a set built with the other are not reported as a mismatch.
+	/// </summary>
+	/// <typeparam name="T">The type the comparer compares.</typeparam>
+	/// <param name="comparer">The comparer to normalize.</param>
+	/// <returns>The comparer, or the default equality comparer when the two are equivalent.</returns>
+	private static object? Normalize<T>(object? comparer) =>
+		typeof(T) == typeof(string) && ReferenceEquals(comparer, StringComparer.Ordinal)
+			? EqualityComparer<string>.Default
+			: comparer;
 
 	/// <summary>
 	/// Replaces the contents of <paramref name="dest"/> with <paramref name="items"/>, restoring the original
