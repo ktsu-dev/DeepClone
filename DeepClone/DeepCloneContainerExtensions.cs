@@ -468,11 +468,20 @@ public static class DeepCloneContainerExtensions
 	/// var clonedList = originalList.DeepClone().ToList();
 	/// var clonedArray = originalArray.DeepClone().ToArray();
 	/// </code>
+	///
+	/// A source that implements <see cref="IDeepCloneable"/> itself, such as a custom collection whose
+	/// <see cref="IDeepCloneable.DeepClone"/> is implemented explicitly, is cloned by that implementation,
+	/// so the clone keeps the source's type and its other fields rather than becoming a list of cloned items.
 	/// </remarks>
 	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
 	public static IEnumerable<T> DeepClone<T>(this IEnumerable<T> source)
 	{
 		Ensure.NotNull(source);
+
+		if (source is IDeepCloneable cloneable)
+		{
+			return (IEnumerable<T>)cloneable.DeepClone();
+		}
 
 		return [.. source.Select(DeepClone)];
 	}
