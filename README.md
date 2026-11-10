@@ -527,7 +527,7 @@ public class ComplexObject : DeepCloneable<ComplexObject>
     public string? Name { get; set; }
     public List<ItemObject> Items { get; set; } = new();
     public Dictionary<string, DataObject> DataMapping { get; set; } = new();
-    public HashSet<int> UniqueIds { get; set; } = new();
+    public HashSet<string> Tags { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     protected override ComplexObject CreateInstance() => new ComplexObject();
     
@@ -537,13 +537,16 @@ public class ComplexObject : DeepCloneable<ComplexObject>
         
         clone.Name = Name;
 
-        // Use DeepCloneFrom for all collections - this handles cloning correctly
-        clone.Items.DeepCloneFrom(Items);
-        clone.DataMapping.DeepCloneFrom(DataMapping);
-        
-        // Even for value type collections, DeepCloneFrom can be used for consistency
-        // This is equivalent to copying each element manually
-        clone.UniqueIds.DeepCloneFrom(UniqueIds);
+        // For a settable collection property, assign a clone. DeepClone() keeps the source's
+        // comparer, so the clone behaves like the source even if the property was reassigned
+        // (by a deserializer, say) to a collection with a different comparer.
+        clone.Items = Items.DeepClone();
+        clone.DataMapping = DataMapping.DeepClone();
+
+        // For a get-only property, fill the clone's own collection in place. The clone keeps
+        // its own comparer, so DeepCloneFrom throws ArgumentException if a HashSet, SortedSet,
+        // Dictionary, SortedDictionary or SortedList source uses a different comparer.
+        clone.Tags.DeepCloneFrom(Tags);
     }
 }
 
