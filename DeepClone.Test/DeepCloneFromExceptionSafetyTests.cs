@@ -2,14 +2,19 @@
 
 namespace ktsu.DeepClone.Test;
 
+using System.Collections.Concurrent;
+
 /// <summary>
 /// Tests that a <c>DeepCloneFrom</c> that throws part-way leaves the destination with its original contents,
-/// instead of cleared and half-filled with the source's (ktsu-dev/DeepClone#90).
+/// instead of cleared and half-filled with the source's (ktsu-dev/DeepClone#90, #124).
 /// </summary>
 [TestClass]
 public class DeepCloneFromExceptionSafetyTests
 {
 	private static readonly string[] OriginalNames = ["keep1", "keep2"];
+
+	// A stack built from [keep1, keep2] pushes keep2 last, so it pops keep2 first
+	private static readonly string[] PopOrderNames = ["keep2", "keep1"];
 
 	/// <summary>
 	/// Tests that an element whose DeepClone throws leaves the destination list unchanged.
@@ -75,6 +80,68 @@ public class DeepCloneFromExceptionSafetyTests
 		Assert.HasCount(1, dest);
 		Assert.AreEqual("a", dest[0].Name);
 		Assert.AreNotSame(a, dest[0]);
+	}
+
+	private static ThrowingItem[] ThrowingSource() => [new("a"), new("boom"), new("c")];
+
+	/// <summary>
+	/// Tests that an element whose DeepClone throws leaves the destination stack unchanged, in its original pop order.
+	/// </summary>
+	[TestMethod]
+	public void Stack_ElementCloneThrows_DestinationUnchanged()
+	{
+		ThrowingItem keep1 = new("keep1");
+		ThrowingItem keep2 = new("keep2");
+		Stack<ThrowingItem> dest = new([keep1, keep2]);
+
+		Assert.ThrowsExactly<InvalidOperationException>(() => dest.DeepCloneFrom(ThrowingSource()));
+
+		Assert.AreSequenceEqual(PopOrderNames, dest.Select(item => item.Name));
+	}
+
+	/// <summary>
+	/// Tests that an element whose DeepClone throws leaves the destination queue unchanged, in its original dequeue order.
+	/// </summary>
+	[TestMethod]
+	public void Queue_ElementCloneThrows_DestinationUnchanged()
+	{
+		ThrowingItem keep1 = new("keep1");
+		ThrowingItem keep2 = new("keep2");
+		Queue<ThrowingItem> dest = new([keep1, keep2]);
+
+		Assert.ThrowsExactly<InvalidOperationException>(() => dest.DeepCloneFrom(ThrowingSource()));
+
+		Assert.AreSequenceEqual(OriginalNames, dest.Select(item => item.Name));
+	}
+
+	/// <summary>
+	/// Tests that an element whose DeepClone throws leaves the destination concurrent stack unchanged, in its original pop order.
+	/// </summary>
+	[TestMethod]
+	public void ConcurrentStack_ElementCloneThrows_DestinationUnchanged()
+	{
+		ThrowingItem keep1 = new("keep1");
+		ThrowingItem keep2 = new("keep2");
+		ConcurrentStack<ThrowingItem> dest = new([keep1, keep2]);
+
+		Assert.ThrowsExactly<InvalidOperationException>(() => dest.DeepCloneFrom(ThrowingSource()));
+
+		Assert.AreSequenceEqual(PopOrderNames, dest.Select(item => item.Name));
+	}
+
+	/// <summary>
+	/// Tests that an element whose DeepClone throws leaves the destination concurrent queue unchanged, in its original dequeue order.
+	/// </summary>
+	[TestMethod]
+	public void ConcurrentQueue_ElementCloneThrows_DestinationUnchanged()
+	{
+		ThrowingItem keep1 = new("keep1");
+		ThrowingItem keep2 = new("keep2");
+		ConcurrentQueue<ThrowingItem> dest = new([keep1, keep2]);
+
+		Assert.ThrowsExactly<InvalidOperationException>(() => dest.DeepCloneFrom(ThrowingSource()));
+
+		Assert.AreSequenceEqual(OriginalNames, dest.Select(item => item.Name));
 	}
 
 	/// <summary>

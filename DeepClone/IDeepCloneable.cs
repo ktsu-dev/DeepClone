@@ -42,6 +42,10 @@ public interface IDeepCloneable
 	/// A public <c>object DeepClone()</c> cannot sit beside <c>Foo DeepClone()</c> (CS0111),
 	/// and <c>public object DeepClone() => DeepClone();</c> on its own calls itself until
 	/// the stack overflows.
+	/// With only the explicit implementation, a type that is also an <see cref="IEnumerable{T}"/>
+	/// has no instance <c>DeepClone()</c>, so <c>collection.DeepClone()</c> binds to the
+	/// <see cref="IEnumerable{T}"/> extension. That extension calls this method for such a
+	/// source, so the clone is still this type.
 	/// </remarks>
 	public object DeepClone();
 }
