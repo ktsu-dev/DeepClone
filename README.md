@@ -545,7 +545,8 @@ public class ComplexObject : DeepCloneable<ComplexObject>
 
         // For a get-only property, fill the clone's own collection in place. The clone keeps
         // its own comparer, so DeepCloneFrom throws ArgumentException if a HashSet, SortedSet,
-        // Dictionary, SortedDictionary or SortedList source uses a different comparer.
+        // Dictionary, SortedDictionary, SortedList, ConcurrentDictionary or OrderedDictionary
+        // source uses a different comparer.
         clone.Tags.DeepCloneFrom(Tags);
     }
 }

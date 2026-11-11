@@ -123,7 +123,8 @@ public static class DeepCloneContainerExtensions
 	/// </code>
 	/// <para>
 	/// The destination keeps its own key comparer. A <see cref="Dictionary{TKey, TValue}"/>,
-	/// <see cref="SortedDictionary{TKey, TValue}"/> or <see cref="SortedList{TKey, TValue}"/> source whose comparer
+	/// <see cref="SortedDictionary{TKey, TValue}"/>, <see cref="SortedList{TKey, TValue}"/>,
+	/// <see cref="ConcurrentDictionary{TKey, TValue}"/> or (.NET 9 and later) <c>OrderedDictionary&lt;TKey, TValue&gt;</c> source whose comparer
 	/// differs from the destination's would clone into a dictionary whose lookups miss or whose order changes, so that
 	/// case throws instead. Assign <c>dest = source.DeepClone()</c> for a settable property, which keeps the source's
 	/// comparer, and keep <c>DeepCloneFrom</c> for get-only ones.
@@ -202,6 +203,14 @@ public static class DeepCloneContainerExtensions
 				break;
 			case SortedList<TKey, TValue> destMap when source is SortedList<TKey, TValue> sourceMap:
 				(destComparer, sourceComparer, kind) = (destMap.Comparer, sourceMap.Comparer, "SortedList");
+				break;
+#if NET9_0_OR_GREATER
+			case OrderedDictionary<TKey, TValue> destMap when source is OrderedDictionary<TKey, TValue> sourceMap:
+				(destComparer, sourceComparer, kind) = (destMap.Comparer, sourceMap.Comparer, "OrderedDictionary");
+				break;
+#endif
+			case ConcurrentDictionary<TKey, TValue> destMap when source is ConcurrentDictionary<TKey, TValue> sourceMap:
+				(destComparer, sourceComparer, kind) = (ConcurrentComparer<TKey, TValue>.Of(destMap), ConcurrentComparer<TKey, TValue>.Of(sourceMap), "ConcurrentDictionary");
 				break;
 			default:
 				return;
