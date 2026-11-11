@@ -8,6 +8,9 @@ using System.Reflection;
 #if NET
 using System.Collections.Immutable;
 #endif
+#if NET8_0_OR_GREATER
+using System.Collections.Frozen;
+#endif
 
 /// <summary>
 /// Extension methods for deep cloning collections of objects.
@@ -38,13 +41,25 @@ public static class DeepCloneContainerExtensions
 	/// var clonedList = new List&lt;MyType&gt;();
 	/// clonedList.DeepCloneFrom(originalList);
 	/// </code>
+	/// <para>
+	/// The destination keeps its own comparer. A <see cref="HashSet{T}"/> or <see cref="SortedSet{T}"/> source whose
+	/// comparer differs from the destination's would clone into a collection that drops elements or orders them
+	/// differently, so that case throws instead. Assign <c>dest = source.DeepClone()</c> for a settable property,
+	/// which keeps the source's comparer, and keep <c>DeepCloneFrom</c> for get-only ones.
+	/// </para>
 	/// </remarks>
 	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
+	/// <exception cref="ArgumentException">
+	/// Thrown, before <paramref name="dest"/> is changed, if both are <see cref="HashSet{T}"/> or both are
+	/// <see cref="SortedSet{T}"/> and their comparers differ.
+	/// </exception>
 	public static void DeepCloneFrom<T>(this ICollection<T> dest, IEnumerable<T> source)
 	{
 		Ensure.NotNull(dest);
 
 		Ensure.NotNull(source);
+
+		EnsureSameComparer(dest, source);
 
 		T[] clones = CloneAll(source);
 
@@ -70,8 +85,19 @@ public static class DeepCloneContainerExtensions
 	/// var clonedDict = new Dictionary&lt;KeyType, ValueType&gt;();
 	/// clonedDict.DeepCloneFrom(originalDict);
 	/// </code>
+	/// <para>
+	/// The destination keeps its own key comparer. A <see cref="Dictionary{TKey, TValue}"/>,
+	/// <see cref="SortedDictionary{TKey, TValue}"/> or <see cref="SortedList{TKey, TValue}"/> source whose comparer
+	/// differs from the destination's would clone into a dictionary whose lookups miss or whose order changes, so that
+	/// case throws instead. Assign <c>dest = source.DeepClone()</c> for a settable property, which keeps the source's
+	/// comparer, and keep <c>DeepCloneFrom</c> for get-only ones.
+	/// </para>
 	/// </remarks>
 	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
+	/// <exception cref="ArgumentException">
+	/// Thrown, before <paramref name="dest"/> is changed, if both are the same one of those dictionary kinds and their
+	/// comparers differ.
+	/// </exception>
 	public static void DeepCloneFrom<TKey, TValue>(this IDictionary<TKey, TValue> dest, IDictionary<TKey, TValue> source)
 		where TKey : notnull
 	{
@@ -79,10 +105,111 @@ public static class DeepCloneContainerExtensions
 
 		Ensure.NotNull(source);
 
+		EnsureSameComparer(dest, source);
+
 		KeyValuePair<TKey, TValue>[] clones = CloneAllPairs(source);
 
 		ReplaceContents(dest, clones);
 	}
+
+	/// <summary>
+	/// Throws when <paramref name="dest"/> and <paramref name="source"/> are the same comparer-holding collection kind
+	/// with different comparers, since filling one from the other would silently change the clone (ktsu-dev/DeepClone#139).
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the collections.</typeparam>
+	/// <param name="dest">The destination collection.</param>
+	/// <param name="source">The source collection.</param>
+	private static void EnsureSameComparer<T>(ICollection<T> dest, IEnumerable<T> source)
+	{
+		object? destComparer;
+		object? sourceComparer;
+		string kind;
+		switch (dest)
+		{
+			case HashSet<T> destSet when source is HashSet<T> sourceSet:
+				(destComparer, sourceComparer, kind) = (destSet.Comparer, sourceSet.Comparer, "HashSet");
+				break;
+			case SortedSet<T> destSet when source is SortedSet<T> sourceSet:
+				(destComparer, sourceComparer, kind) = (destSet.Comparer, sourceSet.Comparer, "SortedSet");
+				break;
+			default:
+				return;
+		}
+
+		if (!ComparersMatch<T>(destComparer, sourceComparer))
+		{
+			throw new ArgumentException(ComparerMismatchMessage(kind, destComparer, sourceComparer), nameof(source));
+		}
+	}
+
+	/// <summary>
+	/// Throws when <paramref name="dest"/> and <paramref name="source"/> are the same comparer-holding dictionary kind
+	/// with different key comparers, since filling one from the other would silently change the clone (ktsu-dev/DeepClone#139).
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionaries.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionaries.</typeparam>
+	/// <param name="dest">The destination dictionary.</param>
+	/// <param name="source">The source dictionary.</param>
+	private static void EnsureSameComparer<TKey, TValue>(IDictionary<TKey, TValue> dest, IDictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		object? destComparer;
+		object? sourceComparer;
+		string kind;
+		switch (dest)
+		{
+			case Dictionary<TKey, TValue> destMap when source is Dictionary<TKey, TValue> sourceMap:
+				(destComparer, sourceComparer, kind) = (destMap.Comparer, sourceMap.Comparer, "Dictionary");
+				break;
+			case SortedDictionary<TKey, TValue> destMap when source is SortedDictionary<TKey, TValue> sourceMap:
+				(destComparer, sourceComparer, kind) = (destMap.Comparer, sourceMap.Comparer, "SortedDictionary");
+				break;
+			case SortedList<TKey, TValue> destMap when source is SortedList<TKey, TValue> sourceMap:
+				(destComparer, sourceComparer, kind) = (destMap.Comparer, sourceMap.Comparer, "SortedList");
+				break;
+			default:
+				return;
+		}
+
+		if (!ComparersMatch<TKey>(destComparer, sourceComparer))
+		{
+			throw new ArgumentException(ComparerMismatchMessage(kind, destComparer, sourceComparer), nameof(source));
+		}
+	}
+
+	/// <summary>
+	/// Reports whether two comparers compare the same way.
+	/// </summary>
+	/// <typeparam name="T">The type the comparers compare.</typeparam>
+	/// <param name="destComparer">The destination's comparer.</param>
+	/// <param name="sourceComparer">The source's comparer.</param>
+	/// <returns><see langword="true"/> if they are equal once normalized.</returns>
+	private static bool ComparersMatch<T>(object? destComparer, object? sourceComparer) =>
+		Equals(Normalize<T>(destComparer), Normalize<T>(sourceComparer));
+
+	/// <summary>
+	/// Builds the message for a comparer mismatch, naming both comparers and the fix.
+	/// </summary>
+	/// <param name="kind">The collection kind.</param>
+	/// <param name="destComparer">The destination's comparer.</param>
+	/// <param name="sourceComparer">The source's comparer.</param>
+	/// <returns>The message.</returns>
+	private static string ComparerMismatchMessage(string kind, object? destComparer, object? sourceComparer) =>
+		$"The source {kind} uses comparer {sourceComparer?.GetType().Name ?? "null"} but the destination uses " +
+		$"{destComparer?.GetType().Name ?? "null"}, so DeepCloneFrom would produce a clone that behaves differently " +
+		"from its source. Assign dest = source.DeepClone() instead, which keeps the source's comparer.";
+
+	/// <summary>
+	/// Maps <see cref="StringComparer.Ordinal"/> to the default string equality comparer, which compares the same way,
+	/// so a set built with one and a set built with the other are not reported as a mismatch.
+	/// </summary>
+	/// <typeparam name="T">The type the comparer compares.</typeparam>
+	/// <param name="comparer">The comparer to normalize.</param>
+	/// <returns>The comparer, or the default equality comparer when the two are equivalent.</returns>
+	private static object? Normalize<T>(object? comparer) =>
+		typeof(T) == typeof(string) && ReferenceEquals(comparer, StringComparer.Ordinal)
+			? EqualityComparer<string>.Default
+			: comparer;
 
 	/// <summary>
 	/// Replaces the contents of <paramref name="dest"/> with <paramref name="items"/>, restoring the original
@@ -291,12 +418,15 @@ public static class DeepCloneContainerExtensions
 	/// Without that, a dictionary reached only as a sequence of pairs (an <see cref="IReadOnlyDictionary{TKey, TValue}"/>
 	/// passed to <see cref="DeepCloneFrom{T}(ICollection{T}, IEnumerable{T})"/>, or LINQ over a dictionary)
 	/// came back sharing its keys and values with the source (ktsu-dev/DeepClone#82).
+	/// A pair held as <c>KeyValuePair&lt;TKey, TValue&gt;?</c>, or boxed in an element type such as
+	/// <see cref="object"/>, is rebuilt the same way, chosen from its runtime type (ktsu-dev/DeepClone#135).
 	/// </remarks>
 	private static T DeepClone<T>(T source) => source switch
 	{
 		null => default!,
 		IDeepCloneable cloneable => (T)cloneable.DeepClone(),
 		_ when PairCloner<T>.Instance is { } pairCloner => pairCloner.Clone(source),
+		_ when !typeof(T).IsValueType && BoxedPairCloner.For(source.GetType()) is { } boxedCloner => (T)boxedCloner.CloneBoxed(source),
 		_ => source,
 	};
 
@@ -319,12 +449,76 @@ public static class DeepCloneContainerExtensions
 	/// </summary>
 	/// <typeparam name="TKey">The type of the key.</typeparam>
 	/// <typeparam name="TValue">The type of the value.</typeparam>
-	private sealed class PairElementCloner<TKey, TValue> : IElementCloner<KeyValuePair<TKey, TValue>>
+	private sealed class PairElementCloner<TKey, TValue> : IElementCloner<KeyValuePair<TKey, TValue>>, IBoxedCloner
 	{
 		/// <inheritdoc />
 		public KeyValuePair<TKey, TValue> Clone(KeyValuePair<TKey, TValue> source) =>
 			new(DeepClone(source.Key), DeepClone(source.Value));
+
+		/// <inheritdoc />
+		public object CloneBoxed(object source) => Clone((KeyValuePair<TKey, TValue>)source);
 	}
+
+	/// <summary>
+	/// Deep clones the key and value of a key-value pair held as a <see cref="Nullable{T}"/>.
+	/// </summary>
+	/// <typeparam name="TKey">The type of the key.</typeparam>
+	/// <typeparam name="TValue">The type of the value.</typeparam>
+	private sealed class NullablePairElementCloner<TKey, TValue> : IElementCloner<KeyValuePair<TKey, TValue>?>
+	{
+		/// <inheritdoc />
+		public KeyValuePair<TKey, TValue>? Clone(KeyValuePair<TKey, TValue>? source) =>
+			source is { } pair ? new KeyValuePair<TKey, TValue>(DeepClone(pair.Key), DeepClone(pair.Value)) : null;
+	}
+
+	/// <summary>
+	/// Deep clones an element that is known only by its runtime type.
+	/// </summary>
+	private interface IBoxedCloner
+	{
+		/// <summary>
+		/// Deep clones <paramref name="source"/>.
+		/// </summary>
+		/// <param name="source">The boxed element to clone.</param>
+		/// <returns>The boxed clone.</returns>
+		public object CloneBoxed(object source);
+	}
+
+	/// <summary>
+	/// Caches, per runtime type, the cloner that clones a boxed key-value pair.
+	/// </summary>
+	private static class BoxedPairCloner
+	{
+		private static readonly ConcurrentDictionary<Type, IBoxedCloner?> Cloners = new();
+
+		/// <summary>
+		/// Gets the cloner for a boxed value of <paramref name="runtimeType"/> when it is a
+		/// <see cref="KeyValuePair{TKey, TValue}"/>, otherwise <see langword="null"/>.
+		/// </summary>
+		/// <param name="runtimeType">The runtime type of the element.</param>
+		/// <returns>The cloner, or <see langword="null"/>.</returns>
+		internal static IBoxedCloner? For(Type runtimeType) =>
+			IsKeyValuePair(runtimeType)
+				? Cloners.GetOrAdd(runtimeType, static type => (IBoxedCloner)CreatePairCloner(type.GetGenericArguments()))
+				: null;
+	}
+
+	/// <summary>
+	/// Determines whether <paramref name="type"/> is a closed <see cref="KeyValuePair{TKey, TValue}"/>.
+	/// </summary>
+	/// <param name="type">The type to check.</param>
+	/// <returns><see langword="true"/> when it is a key-value pair type.</returns>
+	private static bool IsKeyValuePair(Type type) =>
+		type.IsGenericType && type.GetGenericTypeDefinition() == typeof(KeyValuePair<,>);
+
+	/// <summary>
+	/// Creates the <see cref="PairElementCloner{TKey, TValue}"/> for a pair's key and value types. This is the one
+	/// place a pair cloner is made from reflected type arguments.
+	/// </summary>
+	/// <param name="pairArguments">The key and value types.</param>
+	/// <returns>The cloner.</returns>
+	private static object CreatePairCloner(Type[] pairArguments) =>
+		Activator.CreateInstance(typeof(PairElementCloner<,>).MakeGenericType(pairArguments))!;
 
 	/// <summary>
 	/// Caches, per element type, the cloner that clones it as a key-value pair.
@@ -334,12 +528,23 @@ public static class DeepCloneContainerExtensions
 	{
 		/// <summary>
 		/// Gets a <see cref="PairElementCloner{TKey, TValue}"/> for <typeparamref name="T"/> when it is a
-		/// <see cref="KeyValuePair{TKey, TValue}"/>, otherwise <see langword="null"/>.
+		/// <see cref="KeyValuePair{TKey, TValue}"/>, a <see cref="NullablePairElementCloner{TKey, TValue}"/> when it is a
+		/// nullable one, otherwise <see langword="null"/>.
 		/// </summary>
-		internal static IElementCloner<T>? Instance { get; } =
-			typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
-				? (IElementCloner<T>)Activator.CreateInstance(typeof(PairElementCloner<,>).MakeGenericType(typeof(T).GetGenericArguments()))!
+		internal static IElementCloner<T>? Instance { get; } = Create();
+
+		private static IElementCloner<T>? Create()
+		{
+			if (IsKeyValuePair(typeof(T)))
+			{
+				return (IElementCloner<T>)CreatePairCloner(typeof(T).GetGenericArguments());
+			}
+
+			Type? underlying = Nullable.GetUnderlyingType(typeof(T));
+			return underlying is not null && IsKeyValuePair(underlying)
+				? (IElementCloner<T>)Activator.CreateInstance(typeof(NullablePairElementCloner<,>).MakeGenericType(underlying.GetGenericArguments()))!
 				: null;
+		}
 	}
 
 	/// <summary>
@@ -352,18 +557,28 @@ public static class DeepCloneContainerExtensions
 	/// <remarks>
 	/// The items are cloned when this method is called, so the result is a snapshot: it does not change
 	/// when the source changes, and enumerating it again yields the same cloned instances. To get a
-	/// specific collection type, convert the result (for example using ToList() or ToArray()).
+	/// specific collection type, convert the result (for example using ToList() or ToHashSet()). Arrays,
+	/// <see cref="List{T}"/>, <see cref="Queue{T}"/> and <see cref="LinkedList{T}"/> have overloads that
+	/// already return their own type.
 	///
 	/// Example usage:
 	/// <code>
-	/// var clonedList = originalList.DeepClone().ToList();
-	/// var clonedArray = originalArray.DeepClone().ToArray();
+	/// var clonedSet = originalSequence.DeepClone().ToHashSet();
 	/// </code>
+	///
+	/// A source that implements <see cref="IDeepCloneable"/> itself, such as a custom collection whose
+	/// <see cref="IDeepCloneable.DeepClone"/> is implemented explicitly, is cloned by that implementation,
+	/// so the clone keeps the source's type and its other fields rather than becoming a list of cloned items.
 	/// </remarks>
 	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
 	public static IEnumerable<T> DeepClone<T>(this IEnumerable<T> source)
 	{
 		Ensure.NotNull(source);
+
+		if (source is IDeepCloneable cloneable)
+		{
+			return (IEnumerable<T>)cloneable.DeepClone();
+		}
 
 		return [.. CloneAll(source)];
 	}
@@ -381,9 +596,9 @@ public static class DeepCloneContainerExtensions
 	/// are deep cloned if they implement IDeepCloneable. The source's key comparer is kept when the runtime
 	/// type exposes one: <see cref="Dictionary{TKey, TValue}"/>, <see cref="SortedDictionary{TKey, TValue}"/>,
 	/// <see cref="SortedList{TKey, TValue}"/>, <see cref="ConcurrentDictionary{TKey, TValue}"/> (.NET 6 and later),
-	/// and, on .NET, <c>ImmutableDictionary</c> and <c>ImmutableSortedDictionary</c>. A sorted source stays sorted,
-	/// a sorted list or concurrent dictionary is cloned as the same type, and an immutable source is cloned as the
-	/// mutable dictionary of the same kind. A <see cref="ReadOnlyDictionary{TKey, TValue}"/> is cloned according to the
+	/// on .NET, <c>ImmutableDictionary</c> and <c>ImmutableSortedDictionary</c>, and, on .NET 8 and later,
+	/// <c>FrozenDictionary</c>. A sorted source stays sorted, a sorted list or concurrent dictionary is cloned as the
+	/// same type, and an immutable or frozen source is cloned as the mutable dictionary of the same kind. A <see cref="ReadOnlyDictionary{TKey, TValue}"/> is cloned according to the
 	/// dictionary it wraps.
 	///
 	/// Example usage:
@@ -467,6 +682,32 @@ public static class DeepCloneContainerExtensions
 		return clone;
 	}
 
+#if NET9_0_OR_GREATER
+	/// <summary>
+	/// Deep clones an ordered dictionary, keeping its key comparer and key order.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="source">The source dictionary to clone.</param>
+	/// <returns>A new ordered dictionary with the source's comparer and key order, containing deep clones of the keys
+	/// and values if they implement IDeepCloneable, otherwise containing the original keys and values.</returns>
+	/// <remarks>
+	/// <see cref="OrderedDictionary{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/> and
+	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
+	/// <c>orderedDictionary.DeepClone()</c> compile without a cast (.NET 9 and later).
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static OrderedDictionary<TKey, TValue> DeepClone<TKey, TValue>(this OrderedDictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		OrderedDictionary<TKey, TValue> clone = new(source.Count, source.Comparer);
+		AddClonedPairs(clone, source);
+		return clone;
+	}
+#endif
+
 #if NET
 	/// <summary>
 	/// Deep clones an immutable dictionary, keeping its key and value comparers.
@@ -512,6 +753,48 @@ public static class DeepCloneContainerExtensions
 		return ImmutableSortedDictionary.CreateRange(source.KeyComparer, source.ValueComparer, CloneAllPairs(source));
 	}
 
+#if NET8_0_OR_GREATER
+	/// <summary>
+	/// Deep clones a frozen dictionary, keeping its key comparer.
+	/// </summary>
+	/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
+	/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+	/// <param name="source">The source dictionary to clone.</param>
+	/// <returns>A new frozen dictionary with the source's comparer, containing deep clones of the keys and values
+	/// if they implement IDeepCloneable, otherwise containing the original keys and values.</returns>
+	/// <remarks>
+	/// <see cref="FrozenDictionary{TKey, TValue}"/> implements both <see cref="IDictionary{TKey, TValue}"/> and
+	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/>, so this overload is also what lets
+	/// <c>frozenDictionary.DeepClone()</c> compile without a cast (.NET 8 and later).
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static FrozenDictionary<TKey, TValue> DeepClone<TKey, TValue>(this FrozenDictionary<TKey, TValue> source)
+		where TKey : notnull
+	{
+		Ensure.NotNull(source);
+
+		return CloneAllPairs(source).ToFrozenDictionary(source.Comparer);
+	}
+
+	/// <summary>
+	/// Deep clones a frozen set, keeping its comparer.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the set.</typeparam>
+	/// <param name="source">The source set to clone.</param>
+	/// <returns>A new frozen set with the source's comparer, containing deep clones of the original items if they
+	/// implement IDeepCloneable, otherwise containing the original items.</returns>
+	/// <remarks>
+	/// Without this overload a frozen set binds to the <see cref="IEnumerable{T}"/> overload, which returns a list
+	/// and loses the comparer (.NET 8 and later).
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static FrozenSet<T> DeepClone<T>(this FrozenSet<T> source)
+	{
+		Ensure.NotNull(source);
+
+		return CloneAll(source).ToFrozenSet(source.Comparer);
+	}
+#endif
 #endif
 
 	/// <summary>
@@ -579,8 +862,8 @@ public static class DeepCloneContainerExtensions
 	/// <see cref="IDictionary{TKey, TValue}"/> overload, a sorted source stays sorted and the source's key comparer
 	/// is kept when the runtime type exposes one: <see cref="Dictionary{TKey, TValue}"/>,
 	/// <see cref="SortedDictionary{TKey, TValue}"/>, <see cref="SortedList{TKey, TValue}"/>,
-	/// <see cref="ConcurrentDictionary{TKey, TValue}"/> (.NET 6 and later), and, on .NET, <c>ImmutableDictionary</c>
-	/// and <c>ImmutableSortedDictionary</c>.
+	/// <see cref="ConcurrentDictionary{TKey, TValue}"/> (.NET 6 and later), on .NET, <c>ImmutableDictionary</c>
+	/// and <c>ImmutableSortedDictionary</c>, and, on .NET 8 and later, <c>FrozenDictionary</c>.
 	///
 	/// Example usage:
 	/// <code>
@@ -605,8 +888,8 @@ public static class DeepCloneContainerExtensions
 	/// <param name="source">The dictionary being cloned, inspected for its runtime type and comparer. A
 	/// <see cref="ReadOnlyDictionary{TKey, TValue}"/> is looked through to the dictionary it wraps.</param>
 	/// <param name="pairs">The key-value pairs of the dictionary being cloned.</param>
-	/// <returns>A <see cref="SortedList{TKey, TValue}"/> or <see cref="ConcurrentDictionary{TKey, TValue}"/> for a source of
-	/// that type, a <see cref="SortedDictionary{TKey, TValue}"/> for any other sorted source, otherwise a
+	/// <returns>A <see cref="SortedList{TKey, TValue}"/>, <see cref="ConcurrentDictionary{TKey, TValue}"/> or (.NET 9 and
+	/// later) <c>OrderedDictionary</c> for a source of that type, a <see cref="SortedDictionary{TKey, TValue}"/> for any other sorted source, otherwise a
 	/// <see cref="Dictionary{TKey, TValue}"/>. All of them implement <see cref="IReadOnlyDictionary{TKey, TValue}"/>.</returns>
 	private static IDictionary<TKey, TValue> CloneDictionary<TKey, TValue>(object source, IEnumerable<KeyValuePair<TKey, TValue>> pairs)
 		where TKey : notnull
@@ -621,6 +904,9 @@ public static class DeepCloneContainerExtensions
 			SortedDictionary<TKey, TValue> sorted => new SortedDictionary<TKey, TValue>(sorted.Comparer),
 			Dictionary<TKey, TValue> dictionary => new Dictionary<TKey, TValue>(dictionary.Count, dictionary.Comparer),
 			SortedList<TKey, TValue> sortedList => new SortedList<TKey, TValue>(sortedList.Count, sortedList.Comparer),
+#if NET9_0_OR_GREATER
+			OrderedDictionary<TKey, TValue> ordered => new OrderedDictionary<TKey, TValue>(ordered.Count, ordered.Comparer),
+#endif
 #if NET6_0_OR_GREATER
 			ConcurrentDictionary<TKey, TValue> concurrent => new ConcurrentDictionary<TKey, TValue>(concurrent.Comparer),
 #endif
@@ -628,6 +914,10 @@ public static class DeepCloneContainerExtensions
 			// The immutable types cannot be filled in place, so the clone is the mutable type with the same lookup.
 			ImmutableSortedDictionary<TKey, TValue> immutableSorted => new SortedDictionary<TKey, TValue>(immutableSorted.KeyComparer),
 			ImmutableDictionary<TKey, TValue> immutable => new Dictionary<TKey, TValue>(immutable.Count, immutable.KeyComparer),
+#endif
+#if NET8_0_OR_GREATER
+			// A frozen dictionary cannot be filled in place either, so the clone is a dictionary with the same comparer.
+			FrozenDictionary<TKey, TValue> frozen => new Dictionary<TKey, TValue>(frozen.Count, frozen.Comparer),
 #endif
 			_ => new Dictionary<TKey, TValue>(),
 		};
@@ -727,6 +1017,29 @@ public static class DeepCloneContainerExtensions
 		Ensure.NotNull(source);
 
 		return [.. CloneAll(source)];
+	}
+
+	/// <summary>
+	/// Deep clones an array.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the array.</typeparam>
+	/// <param name="source">The source array to clone.</param>
+	/// <returns>A new array of the same length containing deep clones of the original items in the same order if they
+	/// implement IDeepCloneable, otherwise containing the original items.</returns>
+	/// <remarks>
+	/// This method preserves the order of elements in the array. Without this overload the call bound to the <see cref="IEnumerable{T}"/> overload, which returns a read-only sequence that cannot be cast back to an array, so callers paid for a second copy with ToArray() (ktsu-dev/DeepClone#130).
+	///
+	/// Example usage:
+	/// <code>
+	/// var clonedArray = originalArray.DeepClone();
+	/// </code>
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static T[] DeepClone<T>(this T[] source)
+	{
+		Ensure.NotNull(source);
+
+		return CloneAll(source);
 	}
 
 	/// <summary>
@@ -851,5 +1164,60 @@ public static class DeepCloneContainerExtensions
 		T[] snapshot = source.ToArray();
 		Array.Reverse(snapshot);
 		return new(CloneAll(snapshot));
+	}
+
+	/// <summary>
+	/// Deep clones a concurrent queue.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the queue.</typeparam>
+	/// <param name="source">The source queue to clone.</param>
+	/// <returns>A new concurrent queue containing deep clones of the original items in the same dequeue order if they
+	/// implement IDeepCloneable, otherwise containing the original items.</returns>
+	/// <remarks>
+	/// This method preserves the dequeue order of the queue. It clones from a single <see cref="ConcurrentQueue{T}.ToArray"/>
+	/// snapshot, so the clone is a consistent copy even while other threads enqueue or dequeue. Without this overload the
+	/// call bound to the <see cref="IEnumerable{T}"/> overload and returned a read-only list (ktsu-dev/DeepClone#128).
+	///
+	/// Example usage:
+	/// <code>
+	/// var clonedQueue = originalQueue.DeepClone();
+	/// </code>
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Style",
+		"IDE0305:Simplify collection initialization",
+		Justification = "ConcurrentQueue.ToArray takes one atomic snapshot; a spread enumerates while other threads enqueue or dequeue (ktsu-dev/DeepClone#128).")]
+	public static ConcurrentQueue<T> DeepClone<T>(this ConcurrentQueue<T> source)
+	{
+		Ensure.NotNull(source);
+
+		return new(CloneAll(source.ToArray()));
+	}
+
+	/// <summary>
+	/// Deep clones a concurrent bag.
+	/// </summary>
+	/// <typeparam name="T">The type of objects in the bag.</typeparam>
+	/// <param name="source">The source bag to clone.</param>
+	/// <returns>A new concurrent bag containing deep clones of the original items if they implement IDeepCloneable,
+	/// otherwise containing the original items.</returns>
+	/// <remarks>
+	/// A bag has no defined order, so only its contents are preserved. It clones from a single
+	/// <see cref="ConcurrentBag{T}.ToArray"/> snapshot, so the clone is a consistent copy even while other threads add or
+	/// take. Without this overload the call bound to the <see cref="IEnumerable{T}"/> overload and returned a read-only
+	/// list (ktsu-dev/DeepClone#128).
+	///
+	/// Example usage:
+	/// <code>
+	/// var clonedBag = originalBag.DeepClone();
+	/// </code>
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static ConcurrentBag<T> DeepClone<T>(this ConcurrentBag<T> source)
+	{
+		Ensure.NotNull(source);
+
+		return [.. CloneAll(source.ToArray())];
 	}
 }

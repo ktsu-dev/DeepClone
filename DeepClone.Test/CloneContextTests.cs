@@ -2,6 +2,8 @@
 
 namespace ktsu.DeepClone.Test;
 
+using System.Collections.Concurrent;
+
 /// <summary>
 /// Tests that one clone operation clones each object once, so cycles end and shared references stay
 /// shared, and that separate clone operations share nothing (ktsu-dev/DeepClone#89).
@@ -177,6 +179,45 @@ public sealed class CloneContextTests
 		List<LinkedNode> list = [x, x];
 
 		List<LinkedNode> clone = list.DeepClone();
+
+		Assert.HasCount(2, clone);
+		Assert.AreNotSame(x, clone[0]);
+		Assert.AreSame(clone[0], clone[1]);
+	}
+
+	[TestMethod]
+	public void ArrayHoldingOneObjectTwice_DeepClone_YieldsOneCloneTwice()
+	{
+		LinkedNode x = new() { Name = "x" };
+		LinkedNode[] array = [x, x];
+
+		LinkedNode[] clone = array.DeepClone();
+
+		Assert.HasCount(2, clone);
+		Assert.AreNotSame(x, clone[0]);
+		Assert.AreSame(clone[0], clone[1]);
+	}
+
+	[TestMethod]
+	public void ConcurrentQueueHoldingOneObjectTwice_DeepClone_YieldsOneCloneTwice()
+	{
+		LinkedNode x = new() { Name = "x" };
+		ConcurrentQueue<LinkedNode> queue = new([x, x]);
+
+		LinkedNode[] clone = [.. queue.DeepClone()];
+
+		Assert.HasCount(2, clone);
+		Assert.AreNotSame(x, clone[0]);
+		Assert.AreSame(clone[0], clone[1]);
+	}
+
+	[TestMethod]
+	public void ConcurrentBagHoldingOneObjectTwice_DeepClone_YieldsOneCloneTwice()
+	{
+		LinkedNode x = new() { Name = "x" };
+		ConcurrentBag<LinkedNode> bag = [x, x];
+
+		LinkedNode[] clone = [.. bag.DeepClone()];
 
 		Assert.HasCount(2, clone);
 		Assert.AreNotSame(x, clone[0]);

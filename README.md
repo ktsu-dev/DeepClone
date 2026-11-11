@@ -527,7 +527,7 @@ public class ComplexObject : DeepCloneable<ComplexObject>
     public string? Name { get; set; }
     public List<ItemObject> Items { get; set; } = new();
     public Dictionary<string, DataObject> DataMapping { get; set; } = new();
-    public HashSet<int> UniqueIds { get; set; } = new();
+    public HashSet<string> Tags { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     protected override ComplexObject CreateInstance() => new ComplexObject();
     
@@ -537,13 +537,16 @@ public class ComplexObject : DeepCloneable<ComplexObject>
         
         clone.Name = Name;
 
-        // Use DeepCloneFrom for all collections - this handles cloning correctly
-        clone.Items.DeepCloneFrom(Items);
-        clone.DataMapping.DeepCloneFrom(DataMapping);
-        
-        // Even for value type collections, DeepCloneFrom can be used for consistency
-        // This is equivalent to copying each element manually
-        clone.UniqueIds.DeepCloneFrom(UniqueIds);
+        // For a settable collection property, assign a clone. DeepClone() keeps the source's
+        // comparer, so the clone behaves like the source even if the property was reassigned
+        // (by a deserializer, say) to a collection with a different comparer.
+        clone.Items = Items.DeepClone();
+        clone.DataMapping = DataMapping.DeepClone();
+
+        // For a get-only property, fill the clone's own collection in place. The clone keeps
+        // its own comparer, so DeepCloneFrom throws ArgumentException if a HashSet, SortedSet,
+        // Dictionary, SortedDictionary or SortedList source uses a different comparer.
+        clone.Tags.DeepCloneFrom(Tags);
     }
 }
 
@@ -612,6 +615,7 @@ Extension methods for deep cloning various container types.
 | `DeepClone<TKey, TValue>` | `IDictionary<TKey, TValue?>?` | Creates a deep clone of a dictionary, preserving the key comparer where the runtime type exposes one |
 | `DeepClone<TKey, TValue>` | `IReadOnlyDictionary<TKey, TValue?>?` | Creates a deep clone of a read-only dictionary, preserving the key comparer where the runtime type exposes one |
 | `DeepClone<TKey, TValue>` | `SortedList<TKey, TValue>` | Creates a deep clone of a sorted list, preserving the key comparer |
+| `DeepClone<TKey, TValue>` | `OrderedDictionary<TKey, TValue>` | Creates a deep clone of an ordered dictionary, preserving the key comparer and key order (.NET 9 and later) |
 | `DeepClone<T>` | `HashSet<T?>?` | Creates a deep clone of a hash set, preserving the comparer |
 | `DeepClone<T>` | `List<T>` | Creates a deep clone of a list, preserving the element order |
 | `DeepClone<T>` | `Queue<T>` | Creates a deep clone of a queue, preserving the dequeue order |
@@ -619,10 +623,14 @@ Extension methods for deep cloning various container types.
 | `DeepClone<T>` | `SortedSet<T?>?` | Creates a deep clone of a sorted set, preserving the comparer |
 | `DeepClone<T>` | `Stack<T?>?` | Creates a deep clone of a stack, preserving the element order |
 | `DeepClone<T>` | `ConcurrentStack<T>` | Creates a deep clone of a concurrent stack from one consistent snapshot, preserving the pop order |
+| `DeepClone<T>` | `ConcurrentQueue<T>` | Creates a deep clone of a concurrent queue from one consistent snapshot, preserving the dequeue order |
+| `DeepClone<T>` | `ConcurrentBag<T>` | Creates a deep clone of a concurrent bag from one consistent snapshot |
 | `DeepClone<T>` | `ImmutableArray<T>` | Creates a deep clone of an immutable array |
 | `DeepClone<T>` | `ImmutableList<T>` | Creates a deep clone of an immutable list |
 | `DeepClone<TKey, TValue>` | `ImmutableDictionary<TKey, TValue>` | Creates a deep clone of an immutable dictionary, preserving the key and value comparers (.NET only) |
 | `DeepClone<TKey, TValue>` | `ImmutableSortedDictionary<TKey, TValue>` | Creates a deep clone of an immutable sorted dictionary, preserving the key and value comparers (.NET only) |
+| `DeepClone<TKey, TValue>` | `FrozenDictionary<TKey, TValue>` | Creates a deep clone of a frozen dictionary, preserving the key comparer (.NET 8 and later) |
+| `DeepClone<T>` | `FrozenSet<T>` | Creates a deep clone of a frozen set, preserving the comparer (.NET 8 and later) |
 | `DeepClone<T>` | `ImmutableHashSet<T>` | Creates a deep clone of an immutable hash set |
 | `DeepClone<T>` | `ImmutableSortedSet<T>` | Creates a deep clone of an immutable sorted set |
 | `DeepClone<T>` | `ImmutableStack<T>` | Creates a deep clone of an immutable stack |

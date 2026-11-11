@@ -61,7 +61,11 @@ public class MyClass : DeepCloneable<MyClass>
 
 - **CRTP Pattern**: Enables type-safe cloning without casting in inheritance hierarchies
 - **Factory Method**: `CreateInstance()` separates object creation from property copying
-- **Extension Methods**: `DeepCloneFrom()` handles in-place collection cloning; `DeepClone()` returns new collections
+- **Extension Methods**: `DeepCloneFrom()` handles in-place collection cloning; `DeepClone()` returns new collections.
+  `DeepClone()` keeps the source's comparer, while `DeepCloneFrom()` keeps the destination's, so `DeepCloneFrom()`
+  throws `ArgumentException` when a `HashSet`, `SortedSet`, `Dictionary`, `SortedDictionary` or `SortedList` source
+  uses a different comparer from a destination of the same kind (#139). `StringComparer.Ordinal` and the default
+  string comparer count as the same. Pinned by `DeepCloneFromComparerTests`
 - **Polymorphic Support**: Non-generic `IDeepCloneable` interface enables cloning through base type references
 - **Clone Context**: `CloneContext` (internal, thread-static) maps each source to its clone for one top-level `DeepClone()` call or collection extension call. `DeepCloneable.DeepClone()` registers the clone before calling the override, so cycles resolve and shared references stay shared; the outermost scope clears the map
 
