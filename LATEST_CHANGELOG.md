@@ -1,29 +1,7 @@
-## v2.5.0 (minor)
+## v2.6.0 (minor)
 
-Changes since v2.4.0:
+Changes since v2.5.0:
 
-- Keep a ConcurrentQueue's and a ConcurrentBag's type when deep cloning [minor] (#129) (matt-edmondson)
-- Return an array from DeepClone on an array [minor] (#131) (matt-edmondson)
-- Keep a frozen dictionary's or set's type and comparer when deep cloning [minor] (#133) (matt-edmondson)
-- Keep an OrderedDictionary's type, comparer and order when deep cloning [minor] (#134) (matt-edmondson)
-- Clone a boxed or nullable key-value pair's key and value [patch] (#136) (matt-edmondson)
-- Clone an IDeepCloneable collection by its own DeepClone in the IEnumerable extension [patch] (#141) (matt-edmondson)
-- Refuse a DeepCloneFrom source whose comparer differs from the destination's [patch] (#142) (matt-edmondson)
-- Clone every item before clearing a Stack, Queue or ConcurrentQueue in DeepCloneFrom [patch] (Claude)
-- Share only immutable data in the README performance example [patch] (#123) (matt-edmondson)
-- Make the README inheritance sample compile and stay generic down the hierarchy [patch] (#122) (matt-edmondson)
-- Show the explicit interface implementation in IDeepCloneable's remarks [patch] (#121) (matt-edmondson)
-- Regenerate CompatibilitySuppressions.xml after the Polyfill 11.4.5 bump [patch] (#119) (matt-edmondson)
-- Add DeepCloneFrom for Stack, Queue, ConcurrentStack and ConcurrentQueue [minor] (#115) (matt-edmondson)
-- Add List, Queue and LinkedList DeepClone overloads that return their own type (#113) (matt-edmondson)
-- Add a ConcurrentStack DeepClone overload that keeps pop order (#112) (matt-edmondson)
-- Leave the destination unchanged when DeepCloneFrom throws (#111) (matt-edmondson)
-- Justify the reflection that reads ReadOnlyDictionary's wrapped dictionary (Claude)
-- [patch] Keep the wrapped dictionary's comparer when cloning a ReadOnlyDictionary (Claude)
-- [patch] Let SortedList and the immutable dictionaries call DeepClone() directly (Claude)
-- [patch] Keep the key comparer when cloning other dictionaries through IDictionary (Claude)
-- Move CI onto the shared ci-shared.yml pipeline (Claude)
-- Clone key-value pairs through a nested cloner type instead of private reflection [patch] (Claude)
-- Clone elements with a switch instead of a nested ternary [patch] (Claude)
-- Deep clone the key and value of a KeyValuePair element [patch] (Claude)
+- Keep a ConcurrentDictionary's type and comparer on the netstandard builds [patch] (#127) (matt-edmondson)
+- Add an array overload of DeepCloneFrom, and refuse a read-only ICollection up front [minor] (#138) (matt-edmondson)
 
