@@ -2,6 +2,13 @@
 
 Changes since v2.4.0:
 
+- Keep a ConcurrentQueue's and a ConcurrentBag's type when deep cloning [minor] (#129) (matt-edmondson)
+- Return an array from DeepClone on an array [minor] (#131) (matt-edmondson)
+- Keep a frozen dictionary's or set's type and comparer when deep cloning [minor] (#133) (matt-edmondson)
+- Keep an OrderedDictionary's type, comparer and order when deep cloning [minor] (#134) (matt-edmondson)
+- Clone a boxed or nullable key-value pair's key and value [patch] (#136) (matt-edmondson)
+- Clone an IDeepCloneable collection by its own DeepClone in the IEnumerable extension [patch] (#141) (matt-edmondson)
+- Refuse a DeepCloneFrom source whose comparer differs from the destination's [patch] (#142) (matt-edmondson)
 - Clone every item before clearing a Stack, Queue or ConcurrentQueue in DeepCloneFrom [patch] (Claude)
 - Share only immutable data in the README performance example [patch] (#123) (matt-edmondson)
 - Make the README inheritance sample compile and stay generic down the hierarchy [patch] (#122) (matt-edmondson)
