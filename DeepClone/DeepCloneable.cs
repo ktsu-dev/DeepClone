@@ -47,10 +47,23 @@ public abstract class DeepCloneable<TDerived> : IDeepCloneable
 	/// <remarks>
 	/// This method handles the cloning process by first creating a new instance
 	/// using <see cref="CreateInstance"/> and then copying data using <see cref="DeepClone(TDerived)"/>.
+	///
+	/// Within one top-level call, an object reached more than once is cloned once: every later
+	/// <see cref="DeepClone()"/> on it, from any <see cref="DeepClone(TDerived)"/> override or collection
+	/// extension, returns that same clone. The clone is recorded before <see cref="DeepClone(TDerived)"/>
+	/// runs, so a circular reference resolves to the clone being built instead of recursing until the
+	/// stack overflows. Separate top-level calls share nothing.
 	/// </remarks>
 	public TDerived DeepClone()
 	{
+		using CloneContext.Scope scope = CloneContext.Enter();
+		if (CloneContext.TryGetClone(this, out object existing))
+		{
+			return (TDerived)existing;
+		}
+
 		TDerived clone = CreateInstance();
+		CloneContext.Register(this, clone);
 		DeepClone(clone);
 		return clone;
 	}
