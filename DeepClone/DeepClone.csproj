@@ -2,6 +2,11 @@
   <Sdk Name="Microsoft.NET.Sdk" />
   <Sdk Name="ktsu.Sdk" />
 
+  <!-- Fails the build on an AOT or trimming warning, such as the IL3050 that let ktsu-dev/DeepClone#92 ship. -->
+  <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Polyfill" PrivateAssets="All" />
   </ItemGroup>

@@ -4,6 +4,7 @@ namespace ktsu.DeepClone;
 
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 #if NET
 using System.Collections.Immutable;
@@ -69,6 +70,40 @@ public static class DeepCloneContainerExtensions
 		EnsureSameComparer(dest, source);
 
 		T[] clones = CloneAll(source);
+
+		ReplaceContents(dest, clones);
+	}
+
+	/// <summary>
+	/// Deep clones key-value pairs from a source sequence into a destination collection of pairs.
+	/// </summary>
+	/// <typeparam name="TKey">The type of the keys.</typeparam>
+	/// <typeparam name="TValue">The type of the values.</typeparam>
+	/// <param name="dest">The destination collection to clone into.</param>
+	/// <param name="source">The source pairs to clone from.</param>
+	/// <remarks>
+	/// This behaves like <see cref="DeepCloneFrom{T}(ICollection{T}, IEnumerable{T})"/>, cloning each pair's key and
+	/// value. It binds when the pairs' key and value types are known where it is called, such as an
+	/// <see cref="IReadOnlyDictionary{TKey, TValue}"/> cloned into a <see cref="List{T}"/> of pairs, so the pairs are
+	/// cloned without building a cloner by reflection, which NativeAOT can't do for value-type keys or values
+	/// (ktsu-dev/DeepClone#92).
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if dest or source is null.</exception>
+	/// <exception cref="ArgumentException">Thrown if <paramref name="dest"/> is read-only.</exception>
+	public static void DeepCloneFrom<TKey, TValue>(this ICollection<KeyValuePair<TKey, TValue>> dest, IEnumerable<KeyValuePair<TKey, TValue>> source)
+	{
+		Ensure.NotNull(dest);
+
+		Ensure.NotNull(source);
+
+		if (dest.IsReadOnly)
+		{
+			throw new ArgumentException("The destination collection is read-only, so it can't be cloned into.", nameof(dest));
+		}
+
+		EnsureSameComparer(dest, source);
+
+		KeyValuePair<TKey, TValue>[] clones = CloneAllPairs(source);
 
 		ReplaceContents(dest, clones);
 	}
@@ -535,7 +570,7 @@ public static class DeepCloneContainerExtensions
 		/// <returns>The cloner, or <see langword="null"/>.</returns>
 		internal static IBoxedCloner? For(Type runtimeType) =>
 			IsKeyValuePair(runtimeType)
-				? Cloners.GetOrAdd(runtimeType, static type => (IBoxedCloner)CreatePairCloner(type.GetGenericArguments()))
+				? Cloners.GetOrAdd(runtimeType, static type => (IBoxedCloner?)CreatePairCloner(type.GetGenericArguments()))
 				: null;
 	}
 
@@ -548,13 +583,50 @@ public static class DeepCloneContainerExtensions
 		type.IsGenericType && type.GetGenericTypeDefinition() == typeof(KeyValuePair<,>);
 
 	/// <summary>
-	/// Creates the <see cref="PairElementCloner{TKey, TValue}"/> for a pair's key and value types. This is the one
-	/// place a pair cloner is made from reflected type arguments.
+	/// Creates the <see cref="PairElementCloner{TKey, TValue}"/> for a pair's key and value types, or returns
+	/// <see langword="null"/> when the runtime can't make that instantiation.
 	/// </summary>
 	/// <param name="pairArguments">The key and value types.</param>
-	/// <returns>The cloner.</returns>
-	private static object CreatePairCloner(Type[] pairArguments) =>
-		Activator.CreateInstance(typeof(PairElementCloner<,>).MakeGenericType(pairArguments))!;
+	/// <returns>The cloner, or <see langword="null"/>.</returns>
+	/// <remarks>
+	/// Under NativeAOT, <see cref="Type.MakeGenericType(Type[])"/> throws <see cref="NotSupportedException"/> for an
+	/// instantiation the compiler didn't generate, which is any pair with a value-type key or value. Thrown from
+	/// <see cref="PairCloner{T}"/>'s initializer, that became a <see cref="TypeInitializationException"/> that broke
+	/// every later clone of the element type (ktsu-dev/DeepClone#92). Such a pair is now copied as it is, as it
+	/// was before #82, and this returns <see langword="null"/>. The pair overloads, such as
+	/// <see cref="DeepClone{TKey, TValue}(IEnumerable{KeyValuePair{TKey, TValue}})"/>, clone it without reflection.
+	/// </remarks>
+	[UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "An instantiation the runtime can't make is caught, and the pair is then copied as it is (ktsu-dev/DeepClone#92).")]
+	private static object? CreatePairCloner(Type[] pairArguments)
+	{
+		try
+		{
+			return Activator.CreateInstance(typeof(PairElementCloner<,>).MakeGenericType(pairArguments));
+		}
+		catch (NotSupportedException)
+		{
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// Creates the <see cref="NullablePairElementCloner{TKey, TValue}"/> for a pair's key and value types, or returns
+	/// <see langword="null"/> when the runtime can't make that instantiation, as <see cref="CreatePairCloner"/> does.
+	/// </summary>
+	/// <param name="pairArguments">The key and value types.</param>
+	/// <returns>The cloner, or <see langword="null"/>.</returns>
+	[UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "An instantiation the runtime can't make is caught, and the pair is then copied as it is (ktsu-dev/DeepClone#92).")]
+	private static object? CreateNullablePairCloner(Type[] pairArguments)
+	{
+		try
+		{
+			return Activator.CreateInstance(typeof(NullablePairElementCloner<,>).MakeGenericType(pairArguments));
+		}
+		catch (NotSupportedException)
+		{
+			return null;
+		}
+	}
 
 	/// <summary>
 	/// Caches, per element type, the cloner that clones it as a key-value pair.
@@ -573,12 +645,12 @@ public static class DeepCloneContainerExtensions
 		{
 			if (IsKeyValuePair(typeof(T)))
 			{
-				return (IElementCloner<T>)CreatePairCloner(typeof(T).GetGenericArguments());
+				return (IElementCloner<T>?)CreatePairCloner(typeof(T).GetGenericArguments());
 			}
 
 			Type? underlying = Nullable.GetUnderlyingType(typeof(T));
 			return underlying is not null && IsKeyValuePair(underlying)
-				? (IElementCloner<T>)Activator.CreateInstance(typeof(NullablePairElementCloner<,>).MakeGenericType(underlying.GetGenericArguments()))!
+				? (IElementCloner<T>?)CreateNullablePairCloner(underlying.GetGenericArguments())
 				: null;
 		}
 	}
@@ -617,6 +689,31 @@ public static class DeepCloneContainerExtensions
 		}
 
 		return [.. CloneAll(source)];
+	}
+
+	/// <summary>
+	/// Deep clones a sequence of key-value pairs.
+	/// </summary>
+	/// <typeparam name="TKey">The type of the keys.</typeparam>
+	/// <typeparam name="TValue">The type of the values.</typeparam>
+	/// <param name="source">The source pairs to clone.</param>
+	/// <returns>A snapshot of the pairs, each holding a deep clone of its key and value.</returns>
+	/// <remarks>
+	/// This behaves like <see cref="DeepClone{T}(IEnumerable{T})"/>. It binds when the pairs' key and value types are
+	/// known where it is called, so the pairs are cloned without building a cloner by reflection, which NativeAOT
+	/// can't do for value-type keys or values (ktsu-dev/DeepClone#92).
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown if source is null.</exception>
+	public static IEnumerable<KeyValuePair<TKey, TValue>> DeepClone<TKey, TValue>(this IEnumerable<KeyValuePair<TKey, TValue>> source)
+	{
+		Ensure.NotNull(source);
+
+		if (source is IDeepCloneable cloneable)
+		{
+			return (IEnumerable<KeyValuePair<TKey, TValue>>)cloneable.DeepClone();
+		}
+
+		return [.. CloneAllPairs(source)];
 	}
 
 	/// <summary>

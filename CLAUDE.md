@@ -66,6 +66,11 @@ public class MyClass : DeepCloneable<MyClass>
   throws `ArgumentException` when a `HashSet`, `SortedSet`, `Dictionary`, `SortedDictionary` or `SortedList` source
   uses a different comparer from a destination of the same kind (#139). `StringComparer.Ordinal` and the default
   string comparer count as the same. Pinned by `DeepCloneFromComparerTests`
+- **NativeAOT**: the library builds with `IsAotCompatible` on net8.0 and later, so an AOT or trimming warning fails
+  the build. A `KeyValuePair` element reached through a generic `T` is cloned by a cloner made with
+  `MakeGenericType`, which NativeAOT can't make for a value-type key or value. That case is caught and the pair is
+  copied as it is, and the `IEnumerable<KeyValuePair<TKey, TValue>>` / `ICollection<KeyValuePair<TKey, TValue>>`
+  overloads clone pairs without reflection (#92). Pinned by `KeyValuePairOverloadTests`
 - **Polymorphic Support**: Non-generic `IDeepCloneable` interface enables cloning through base type references
 - **Clone Context**: `CloneContext` (internal, thread-static) maps each source to its clone for one top-level `DeepClone()` call or collection extension call. `DeepCloneable.DeepClone()` registers the clone before calling the override, so cycles resolve and shared references stay shared; the outermost scope clears the map
 
