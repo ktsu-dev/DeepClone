@@ -138,6 +138,52 @@ public class KeyValuePairOverloadTests
 	}
 
 	/// <summary>
+	/// Tests that a list of pairs, which binds to the <see cref="List{T}"/> overload and so reaches its pairs through a
+	/// generic element type, still clones each pair's value through the reflection path where it is available (#82).
+	/// </summary>
+	[TestMethod]
+	public void PairList_DeepClone_ClonesValuesThroughTheGenericPath()
+	{
+		SimpleObject value = new() { Id = 1, Name = "One" };
+		List<KeyValuePair<int, SimpleObject>> source = [new(1, value)];
+
+		List<KeyValuePair<int, SimpleObject>> clone = source.DeepClone();
+
+		Assert.HasCount(1, clone);
+		Assert.AreNotSame(value, clone[0].Value);
+		Assert.AreEqual("One", clone[0].Value.Name);
+	}
+
+	/// <summary>
+	/// Tests that the pair overload of DeepClone hands a source that is itself <see cref="IDeepCloneable"/> to its own
+	/// DeepClone, as the <see cref="IEnumerable{T}"/> overload does.
+	/// </summary>
+	[TestMethod]
+	public void PairSequence_DeepClone_UsesTheSourcesOwnDeepClone()
+	{
+		IEnumerable<KeyValuePair<int, int>> source = new CloneablePairs([new(1, 2)]);
+
+		IEnumerable<KeyValuePair<int, int>> clone = source.DeepClone();
+
+		Assert.IsInstanceOfType<CloneablePairs>(clone);
+		Assert.AreNotSame(source, clone);
+		Assert.AreEqual(2, clone.Single().Value);
+	}
+
+	/// <summary>
+	/// A sequence of pairs that clones itself.
+	/// </summary>
+	/// <param name="pairs">The pairs it holds.</param>
+	private sealed class CloneablePairs(List<KeyValuePair<int, int>> pairs) : IEnumerable<KeyValuePair<int, int>>, IDeepCloneable
+	{
+		public object DeepClone() => new CloneablePairs([.. pairs]);
+
+		public IEnumerator<KeyValuePair<int, int>> GetEnumerator() => pairs.GetEnumerator();
+
+		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+	}
+
+	/// <summary>
 	/// Tests that a dictionary still binds to the dictionary overloads rather than the pair overloads, so it keeps its
 	/// type and comparer.
 	/// </summary>
