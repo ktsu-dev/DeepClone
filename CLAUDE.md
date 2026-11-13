@@ -63,8 +63,9 @@ public class MyClass : DeepCloneable<MyClass>
 - **Factory Method**: `CreateInstance()` separates object creation from property copying
 - **Extension Methods**: `DeepCloneFrom()` handles in-place collection cloning; `DeepClone()` returns new collections.
   `DeepClone()` keeps the source's comparer, while `DeepCloneFrom()` keeps the destination's, so `DeepCloneFrom()`
-  throws `ArgumentException` when a `HashSet`, `SortedSet`, `Dictionary`, `SortedDictionary` or `SortedList` source
-  uses a different comparer from a destination of the same kind (#139). `StringComparer.Ordinal` and the default
+  throws `ArgumentException` when a `HashSet`, `SortedSet`, `Dictionary`, `SortedDictionary`, `SortedList`,
+  `ConcurrentDictionary` or (.NET 9+) `OrderedDictionary` source uses a different comparer from a destination of the
+  same kind (#139, #143). `StringComparer.Ordinal` and the default
   string comparer count as the same. Pinned by `DeepCloneFromComparerTests`
 - **NativeAOT**: the library builds with `IsAotCompatible` on net8.0 and later, so an AOT or trimming warning fails
   the build. A `KeyValuePair` element reached through a generic `T` is cloned by a cloner made with

@@ -2,6 +2,8 @@
 
 namespace ktsu.DeepClone.Test;
 
+using System.Collections.Concurrent;
+
 /// <summary>
 /// Tests that <c>DeepCloneFrom</c> refuses a source whose comparer differs from the destination's, instead of producing
 /// a clone that drops elements, reorders them or misses lookups (ktsu-dev/DeepClone#139).
@@ -100,6 +102,57 @@ public class DeepCloneFromComparerTests
 
 		Assert.ThrowsExactly<ArgumentException>(() => dest.DeepCloneFrom(source));
 		Assert.IsEmpty(dest);
+	}
+
+	/// <summary>
+	/// Tests that a case-insensitive source ordered dictionary refuses an ordinal destination, whose lookups would miss
+	/// (ktsu-dev/DeepClone#143).
+	/// </summary>
+	[TestMethod]
+	public void OrderedDictionary_DifferentComparer_ThrowsAndLeavesDestinationUnchanged()
+	{
+		OrderedDictionary<string, int> dest = new() { ["keep"] = 0 };
+		OrderedDictionary<string, int> source = new(StringComparer.OrdinalIgnoreCase) { ["KEY"] = 1 };
+
+		Assert.ThrowsExactly<ArgumentException>(() => dest.DeepCloneFrom(source));
+
+		Assert.HasCount(1, dest);
+		Assert.AreEqual(0, dest["keep"]);
+	}
+
+	/// <summary>
+	/// Tests that a case-insensitive source concurrent dictionary refuses an ordinal destination, whose lookups would
+	/// miss (ktsu-dev/DeepClone#143).
+	/// </summary>
+	[TestMethod]
+	public void ConcurrentDictionary_DifferentComparer_ThrowsAndLeavesDestinationUnchanged()
+	{
+		ConcurrentDictionary<string, int> dest = new() { ["keep"] = 0 };
+		ConcurrentDictionary<string, int> source = new(StringComparer.OrdinalIgnoreCase) { ["KEY"] = 1 };
+
+		Assert.ThrowsExactly<ArgumentException>(() => dest.DeepCloneFrom(source));
+
+		Assert.HasCount(1, dest);
+		Assert.AreEqual(0, dest["keep"]);
+	}
+
+	/// <summary>
+	/// Tests that ordered and concurrent dictionaries with matching comparers still clone, keeping case-insensitive
+	/// lookups.
+	/// </summary>
+	[TestMethod]
+	public void OrderedAndConcurrentDictionaries_SameComparer_Clone()
+	{
+		OrderedDictionary<string, int> orderedDest = new(StringComparer.OrdinalIgnoreCase);
+		OrderedDictionary<string, int> orderedSource = new(StringComparer.OrdinalIgnoreCase) { ["KEY"] = 1 };
+		ConcurrentDictionary<string, int> concurrentDest = new(StringComparer.OrdinalIgnoreCase);
+		ConcurrentDictionary<string, int> concurrentSource = new(StringComparer.OrdinalIgnoreCase) { ["KEY"] = 2 };
+
+		orderedDest.DeepCloneFrom(orderedSource);
+		concurrentDest.DeepCloneFrom(concurrentSource);
+
+		Assert.AreEqual(1, orderedDest["key"]);
+		Assert.AreEqual(2, concurrentDest["key"]);
 	}
 
 	/// <summary>
