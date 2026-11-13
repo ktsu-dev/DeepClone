@@ -93,7 +93,7 @@ internal static class CloneContext
 	/// Compares objects by reference, so that a type overriding <see cref="object.Equals(object)"/>
 	/// cannot make two distinct sources share one clone.
 	/// </summary>
-	private sealed class ReferenceComparer : IEqualityComparer<object>
+	internal sealed class ReferenceComparer : IEqualityComparer<object>
 	{
 		internal static ReferenceComparer Instance { get; } = new();
 

@@ -25,6 +25,12 @@ using System.Collections.Frozen;
 public static class DeepCloneContainerExtensions
 {
 	/// <summary>
+	/// The collections whose own <see cref="IDeepCloneable.DeepClone"/> is running on this thread, compared by reference.
+	/// </summary>
+	[ThreadStatic]
+	private static HashSet<object>? sourcesCloningThemselves;
+
+	/// <summary>
 	/// Deep clones items from a source collection into a destination collection.
 	/// </summary>
 	/// <typeparam name="T">The type of objects in the collections.</typeparam>
@@ -402,6 +408,44 @@ public static class DeepCloneContainerExtensions
 	}
 
 	/// <summary>
+	/// Clones a collection that implements <see cref="IDeepCloneable"/> itself by that implementation, so the clone
+	/// keeps the source's runtime type and its own state, such as a label on a <see cref="List{T}"/> subclass, whichever
+	/// collection overload the call bound to (ktsu-dev/DeepClone#140, #148).
+	/// </summary>
+	/// <typeparam name="TCollection">The collection type the overload returns.</typeparam>
+	/// <param name="source">The collection to clone.</param>
+	/// <returns>
+	/// The source's own clone, or <see langword="null"/> when it does not implement <see cref="IDeepCloneable"/> or is
+	/// already being cloned by its own implementation on this thread.
+	/// </returns>
+	/// <remarks>
+	/// The clone runs inside the clone context, so an item the collection holds twice comes back as one shared clone,
+	/// as it does when the collection is cloned element by element (ktsu-dev/DeepClone#132). An implementation that
+	/// calls the base collection's <c>DeepClone()</c> on itself gets the element-wise clone from that call instead of
+	/// recursing into itself.
+	/// </remarks>
+	private static TCollection? CloneItself<TCollection>(TCollection source)
+		where TCollection : class
+	{
+		if (source is not IDeepCloneable cloneable || (sourcesCloningThemselves?.Contains(source) ?? false))
+		{
+			return null;
+		}
+
+		sourcesCloningThemselves ??= new HashSet<object>(CloneContext.ReferenceComparer.Instance);
+		sourcesCloningThemselves.Add(source);
+		try
+		{
+			using CloneContext.Scope scope = CloneContext.Enter();
+			return (TCollection)cloneable.DeepClone();
+		}
+		finally
+		{
+			sourcesCloningThemselves.Remove(source);
+		}
+	}
+
+	/// <summary>
 	/// Snapshots <paramref name="source"/> and deep clones every item, in order, before any destination is touched,
 	/// so an item whose clone throws leaves the destination unchanged (ktsu-dev/DeepClone#90, #124).
 	/// </summary>
@@ -611,9 +655,9 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
-		if (source is IDeepCloneable cloneable)
+		if (CloneItself(source) is { } own)
 		{
-			return (IEnumerable<T>)cloneable.DeepClone();
+			return own;
 		}
 
 		return [.. CloneAll(source)];
@@ -648,6 +692,11 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
+
 		return CloneDictionary(source, source);
 	}
 
@@ -670,6 +719,11 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
+
 		Dictionary<TKey, TValue> clone = new(source.Count, source.Comparer);
 		AddClonedPairs(clone, source);
 		return clone;
@@ -688,6 +742,11 @@ public static class DeepCloneContainerExtensions
 		where TKey : notnull
 	{
 		Ensure.NotNull(source);
+
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
 
 		SortedDictionary<TKey, TValue> clone = new(source.Comparer);
 		AddClonedPairs(clone, source);
@@ -713,6 +772,11 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
+
 		SortedList<TKey, TValue> clone = new(source.Count, source.Comparer);
 		AddClonedPairs(clone, source);
 		return clone;
@@ -737,6 +801,11 @@ public static class DeepCloneContainerExtensions
 		where TKey : notnull
 	{
 		Ensure.NotNull(source);
+
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
 
 		OrderedDictionary<TKey, TValue> clone = new(source.Count, source.Comparer);
 		AddClonedPairs(clone, source);
@@ -854,6 +923,11 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
+
 		KeyValuePair<TKey, TValue>[] pairs = CloneAllPairs(source);
 		return new(pairs, ConcurrentComparer<TKey, TValue>.Of(source));
 	}
@@ -878,6 +952,11 @@ public static class DeepCloneContainerExtensions
 		where TKey : notnull
 	{
 		Ensure.NotNull(source);
+
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
 
 		return new(CloneDictionary(source, source));
 	}
@@ -908,6 +987,11 @@ public static class DeepCloneContainerExtensions
 		where TKey : notnull
 	{
 		Ensure.NotNull(source);
+
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
 
 		return (IReadOnlyDictionary<TKey, TValue>)CloneDictionary(source, source);
 	}
@@ -1054,6 +1138,11 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
+
 		return new(CloneAll(source), source.Comparer);
 	}
 
@@ -1080,6 +1169,11 @@ public static class DeepCloneContainerExtensions
 	public static List<T> DeepClone<T>(this List<T> source)
 	{
 		Ensure.NotNull(source);
+
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
 
 		return [.. CloneAll(source)];
 	}
@@ -1127,6 +1221,11 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
+
 		return new(CloneAll(source));
 	}
 
@@ -1149,6 +1248,11 @@ public static class DeepCloneContainerExtensions
 	public static LinkedList<T> DeepClone<T>(this LinkedList<T> source)
 	{
 		Ensure.NotNull(source);
+
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
 
 		return new(CloneAll(source));
 	}
@@ -1173,6 +1277,11 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
+
 		return new(CloneAll(source), source.Comparer);
 	}
 
@@ -1195,6 +1304,11 @@ public static class DeepCloneContainerExtensions
 	public static Stack<T> DeepClone<T>(this Stack<T> source)
 	{
 		Ensure.NotNull(source);
+
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
 
 		return new(CloneAll(source.Reverse()));
 	}
@@ -1225,6 +1339,11 @@ public static class DeepCloneContainerExtensions
 	public static ConcurrentStack<T> DeepClone<T>(this ConcurrentStack<T> source)
 	{
 		Ensure.NotNull(source);
+
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
 
 		T[] snapshot = source.ToArray();
 		Array.Reverse(snapshot);
@@ -1257,6 +1376,11 @@ public static class DeepCloneContainerExtensions
 	{
 		Ensure.NotNull(source);
 
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
+
 		return new(CloneAll(source.ToArray()));
 	}
 
@@ -1282,6 +1406,11 @@ public static class DeepCloneContainerExtensions
 	public static ConcurrentBag<T> DeepClone<T>(this ConcurrentBag<T> source)
 	{
 		Ensure.NotNull(source);
+
+		if (CloneItself(source) is { } own)
+		{
+			return own;
+		}
 
 		return [.. CloneAll(source.ToArray())];
 	}
