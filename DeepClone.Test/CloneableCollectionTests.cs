@@ -3,6 +3,8 @@
 namespace ktsu.DeepClone.Test;
 
 using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 
 /// <summary>
 /// Tests for deep cloning a collection type that implements <see cref="IDeepCloneable"/> itself.
@@ -175,6 +177,119 @@ public class CloneableCollectionTests
 		Assert.AreEqual("x", tagged.Label);
 		Assert.HasCount(1, tagged);
 		Assert.AreNotSame(original[0], tagged[0]);
+	}
+
+	/// <summary>
+	/// Tests that every overload whose collection type can be subclassed defers to a subclass's own
+	/// IDeepCloneable.DeepClone(), including when the call binds to a dictionary interface (ktsu-dev/DeepClone#148).
+	/// </summary>
+	[TestMethod]
+	public void EveryDerivableOverload_DeepClone_OfIDeepCloneableSubclass_ShouldUseItsOwnClone()
+	{
+		IDictionary<string, SimpleObject> dictionary = new TaggedDictionary();
+		IReadOnlyDictionary<string, SimpleObject> readOnlyDictionary = new TaggedDictionary();
+
+		Assert.IsInstanceOfType<TaggedDictionary>(dictionary.DeepClone());
+		Assert.IsInstanceOfType<TaggedDictionary>(readOnlyDictionary.DeepClone());
+		AssertOwnClone(new MarkedSortedDictionary().DeepClone());
+		AssertOwnClone(new MarkedSortedList().DeepClone());
+		AssertOwnClone(new MarkedOrderedDictionary().DeepClone());
+		AssertOwnClone(new MarkedConcurrentDictionary().DeepClone());
+		AssertOwnClone(new MarkedReadOnlyDictionary().DeepClone());
+		AssertOwnClone(new MarkedLinkedList().DeepClone());
+		AssertOwnClone(new MarkedSortedSet().DeepClone());
+		AssertOwnClone(new MarkedStack().DeepClone());
+		AssertOwnClone(new MarkedConcurrentStack().DeepClone());
+		AssertOwnClone(new MarkedConcurrentQueue().DeepClone());
+		AssertOwnClone(new MarkedConcurrentBag().DeepClone());
+	}
+
+	private static void AssertOwnClone(object clone) =>
+		Assert.IsTrue(clone is IOwnCloneMarker { MadeByOwnClone: true }, $"{clone.GetType().Name} was not cloned by its own implementation.");
+
+	/// <summary>
+	/// Marks a clone made by a test collection's own IDeepCloneable.DeepClone().
+	/// </summary>
+	private interface IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; }
+	}
+
+	private sealed class MarkedSortedDictionary : SortedDictionary<string, SimpleObject>, IDeepCloneable, IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; private init; }
+
+		object IDeepCloneable.DeepClone() => new MarkedSortedDictionary { MadeByOwnClone = true };
+	}
+
+	private sealed class MarkedSortedList : SortedList<string, SimpleObject>, IDeepCloneable, IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; private init; }
+
+		object IDeepCloneable.DeepClone() => new MarkedSortedList { MadeByOwnClone = true };
+	}
+
+	private sealed class MarkedOrderedDictionary : OrderedDictionary<string, SimpleObject>, IDeepCloneable, IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; private init; }
+
+		object IDeepCloneable.DeepClone() => new MarkedOrderedDictionary { MadeByOwnClone = true };
+	}
+
+	private sealed class MarkedConcurrentDictionary : ConcurrentDictionary<string, SimpleObject>, IDeepCloneable, IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; private init; }
+
+		object IDeepCloneable.DeepClone() => new MarkedConcurrentDictionary { MadeByOwnClone = true };
+	}
+
+	private sealed class MarkedReadOnlyDictionary() : ReadOnlyDictionary<string, SimpleObject>(new Dictionary<string, SimpleObject>()), IDeepCloneable, IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; private init; }
+
+		object IDeepCloneable.DeepClone() => new MarkedReadOnlyDictionary { MadeByOwnClone = true };
+	}
+
+	private sealed class MarkedLinkedList : LinkedList<SimpleObject>, IDeepCloneable, IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; private init; }
+
+		object IDeepCloneable.DeepClone() => new MarkedLinkedList { MadeByOwnClone = true };
+	}
+
+	private sealed class MarkedSortedSet : SortedSet<SimpleObject>, IDeepCloneable, IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; private init; }
+
+		object IDeepCloneable.DeepClone() => new MarkedSortedSet { MadeByOwnClone = true };
+	}
+
+	private sealed class MarkedStack : Stack<SimpleObject>, IDeepCloneable, IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; private init; }
+
+		object IDeepCloneable.DeepClone() => new MarkedStack { MadeByOwnClone = true };
+	}
+
+	private sealed class MarkedConcurrentStack : ConcurrentStack<SimpleObject>, IDeepCloneable, IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; private init; }
+
+		object IDeepCloneable.DeepClone() => new MarkedConcurrentStack { MadeByOwnClone = true };
+	}
+
+	private sealed class MarkedConcurrentQueue : ConcurrentQueue<SimpleObject>, IDeepCloneable, IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; private init; }
+
+		object IDeepCloneable.DeepClone() => new MarkedConcurrentQueue { MadeByOwnClone = true };
+	}
+
+	private sealed class MarkedConcurrentBag : ConcurrentBag<SimpleObject>, IDeepCloneable, IOwnCloneMarker
+	{
+		public bool MadeByOwnClone { get; private init; }
+
+		object IDeepCloneable.DeepClone() => new MarkedConcurrentBag { MadeByOwnClone = true };
 	}
 
 	private sealed class TaggedList : List<SimpleObject>, IDeepCloneable
