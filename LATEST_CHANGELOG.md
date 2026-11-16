@@ -1,8 +1,6 @@
-## v2.8.0 (minor)
+## v2.8.1-pre.1 (prerelease)
 
-Changes since v2.7.0:
+Changes since v2.8.0:
 
-- [patch] Refuse a DeepCloneFrom between OrderedDictionaries or ConcurrentDictionaries with different comparers (#145) (matt-edmondson)
-- Clone value-type key-value pairs under NativeAOT without a type initializer crash [minor] (#147) (matt-edmondson)
-- Clone a collection subclass that implements IDeepCloneable by its own implementation in every overload [patch] (#150) (matt-edmondson)
+- Bump the ktsu group with 9 updates (dependabot[bot])
 
